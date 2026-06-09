@@ -1,0 +1,31 @@
+<div class="encabezado-seccion">
+  <h2>Detalle de venta</h2>
+  <a href="/ventas" class="btn-cancelar">← Volver</a>
+</div>
+
+<div class="ficha">
+  <p><strong>Alumno:</strong> <%= venta.alumno_nombre %></p>
+  <p><strong>Grado/Grupo:</strong> <%= venta.grado %>° <%= venta.grupo %></p>
+  <p><strong>Turno:</strong> <%= venta.turno %></p>
+  <p><strong>Especialidad:</strong> <%= venta.especialidad %></p>
+  <p><strong>Fecha:</strong> <%= new Date(venta.fecha).toLocaleString('es-MX') %></p>
+</div>
+
+<table class="tabla">
+  <thead><tr><th>Libro</th><th>Maestro</th><th>Precio</th></tr></thead>
+  <tbody>
+    <% items.forEach(it => { %>
+      <tr><td><%= it.libro %></td><td><%= it.maestro %></td><td>$<%= it.precio %></td></tr>
+    <% }) %>
+  </tbody>
+  <tfoot>
+    <tr><td colspan="2" style="text-align:right;"><strong>Total</strong></td><td><strong>$<%= venta.total %></strong></td></tr>
+  </tfoot>
+</table>
+
+<div class="form-botones" style="margin-top:1.5rem;">
+  <a href="/ventas/<%= venta.id %>/editar" class="btn btn-inline">Corrección / Reembolso</a>
+  <form action="/ventas/<%= venta.id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar esta venta completa?');">
+    <button type="submit" class="link-rojo">Eliminar venta</button>
+  </form>
+</div>

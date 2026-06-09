@@ -1,0 +1,33 @@
+<div class="encabezado-seccion">
+  <h2>Ventas registradas</h2>
+  <a href="/ventas/nueva" class="btn btn-inline">+ Registrar venta</a>
+</div>
+<form method="GET" action="/ventas" class="barra-busqueda">
+  <input type="text" name="q" value="<%= q || '' %>" placeholder="Buscar por nombre del alumno…" autofocus>
+  <button type="submit" class="btn btn-inline">Buscar</button>
+  <% if (q) { %><a href="/ventas" class="btn-cancelar">Limpiar</a><% } %>
+</form>
+<% if (q) { %><p class="nota-info">Mostrando resultados para "<%= q %>".</p><% } %>
+<% if (ventas.length === 0) { %>
+  <p>Aún no hay ventas registradas.</p>
+<% } else { %>
+  <table class="tabla">
+    <thead>
+      <tr><th>Fecha</th><th>Alumno</th><th>Grado/Grupo</th><th>Turno</th><th>Especialidad</th><th>Libros</th><th>Total</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% ventas.forEach(v => { %>
+        <tr>
+          <td><%= new Date(v.fecha).toLocaleDateString('es-MX') %></td>
+          <td><%= v.alumno_nombre %></td>
+          <td><%= v.grado %>° <%= v.grupo %></td>
+          <td><%= v.turno %></td>
+          <td><%= v.especialidad %></td>
+          <td><%= v.num_libros %></td>
+          <td>$<%= v.total %></td>
+          <td class="acciones"><a href="/ventas/<%= v.id %>">Detalles</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>

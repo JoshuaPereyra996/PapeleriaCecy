@@ -1,0 +1,168 @@
+<h2><%= venta && venta.id ? 'Corrección de venta' : 'Registrar venta' %></h2>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<% if (libros.length === 0 || maestros.length === 0) { %>
+  <div class="aviso">Necesitas libros y maestros registrados, y que los libros tengan maestros asignados, antes de capturar ventas.</div>
+<% } else { %>
+  <% if (venta && venta.id) { %>
+    <div class="aviso-correccion">Estás corrigiendo una venta. Quita los libros equivocados y agrega los correctos; abajo verás cuánto cobrar o devolver.</div>
+  <% } %>
+
+  <form action="<%= venta && venta.id ? '/ventas/' + venta.id : '/ventas' %>" method="POST" class="formulario formulario-ancho">
+    <% if (venta && venta.id) { %><input type="hidden" name="total_anterior" value="<%= totalAnterior %>"><% } %>
+
+    <label>Nombre del alumno</label>
+    <input type="text" name="alumno_nombre" value="<%= venta ? venta.alumno_nombre : '' %>" required>
+
+   <div class="fila-doble">
+      <div>
+        <label>Grado</label>
+        <select name="grado" required>
+          <option value="">— Selecciona —</option>
+          <% ['1','2','3'].forEach(op => { %>
+            <option value="<%= op %>" <%= venta && venta.grado === op ? 'selected' : '' %>><%= op %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label>Grupo</label>
+        <select name="grupo" required>
+          <option value="">— Selecciona —</option>
+          <% ['A','B','C','D','E','F'].forEach(op => { %>
+            <option value="<%= op %>" <%= venta && venta.grupo === op ? 'selected' : '' %>><%= op %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div class="fila-doble">
+      <div>
+        <label>Turno</label>
+        <select name="turno" required>
+          <option value="">— Selecciona —</option>
+          <% ['Matutino','Vespertino'].forEach(op => { %>
+            <option value="<%= op %>" <%= venta && venta.turno === op ? 'selected' : '' %>><%= op %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label>Especialidad</label>
+        <select name="especialidad" required>
+          <option value="">— Selecciona —</option>
+          <% ['Alimentos y Bebidas','Recursos Humanos','Mecánica Automotriz'].forEach(op => { %>
+            <option value="<%= op %>" <%= venta && venta.especialidad === op ? 'selected' : '' %>><%= op %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <label>Libros</label>
+    <div id="lineas"></div>
+    <button type="button" id="agregar-linea" class="btn-secundario">+ Agregar otro libro</button>
+
+    <div class="total-preview">Total de la venta: <strong id="total-texto">$0.00</strong></div>
+
+    <% if (venta && venta.id) { %>
+      <div class="balance-box">
+        Total anterior: <strong>$<%= totalAnterior.toFixed(2) %></strong><br>
+        <span id="balance-texto"></span>
+      </div>
+    <% } %>
+
+    <div class="form-botones">
+      <button type="submit" class="btn btn-inline"><%= venta && venta.id ? 'Guardar corrección' : 'Registrar venta' %></button>
+      <a href="<%= venta && venta.id ? '/ventas/' + venta.id : '/ventas' %>" class="btn-cancelar">Cancelar</a>
+    </div>
+  </form>
+
+  <script>
+    const LIBROS = <%- JSON.stringify(libros) %>;
+    const MAESTROS = <%- JSON.stringify(maestros) %>;
+    const RELACIONES = <%- JSON.stringify(relaciones) %>;
+    const ITEMS = <%- JSON.stringify(items || []) %>;
+    const TOTAL_ANTERIOR = <%= totalAnterior || 0 %>;
+    const ES_CORRECCION = <%= venta && venta.id ? 'true' : 'false' %>;
+
+    const libroAMaestros = {}, maestroALibros = {};
+    RELACIONES.forEach(r => {
+      (libroAMaestros[r.libro_id] = libroAMaestros[r.libro_id] || []).push(String(r.maestro_id));
+      (maestroALibros[r.maestro_id] = maestroALibros[r.maestro_id] || []).push(String(r.libro_id));
+    });
+
+    const contenedor = document.getElementById('lineas');
+    const totalTexto = document.getElementById('total-texto');
+
+    function opcion(v, t) { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }
+
+    function llenarLibros(sel, permitidos, conservar) {
+      const actual = conservar ? sel.value : '';
+      sel.innerHTML = '';
+      sel.appendChild(opcion('', '— Libro —'));
+      LIBROS.filter(l => !permitidos || permitidos.includes(String(l.id)))
+            .forEach(l => sel.appendChild(opcion(l.id, l.titulo + ' ($' + l.precio + ')')));
+      if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
+    }
+
+    function llenarMaestros(sel, permitidos, conservar) {
+      const actual = conservar ? sel.value : '';
+      sel.innerHTML = '';
+      sel.appendChild(opcion('', '— Maestro —'));
+      MAESTROS.filter(m => !permitidos || permitidos.includes(String(m.id)))
+              .forEach(m => sel.appendChild(opcion(m.id, m.nombre_completo)));
+      if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
+      if (permitidos && permitidos.length === 1) sel.value = permitidos[0];
+    }
+
+    function recalcular() {
+      let total = 0;
+      contenedor.querySelectorAll('.sel-libro').forEach(s => {
+        const libro = LIBROS.find(l => String(l.id) === s.value);
+        if (libro) total += Number(libro.precio);
+      });
+      totalTexto.textContent = '$' + total.toFixed(2);
+      if (ES_CORRECCION) {
+        const balance = total - TOTAL_ANTERIOR;
+        const span = document.getElementById('balance-texto');
+        if (balance > 0) span.innerHTML = 'Se le COBRA al alumno: <strong class="cobrar">$' + balance.toFixed(2) + '</strong>';
+        else if (balance < 0) span.innerHTML = 'Se le DEVUELVE al alumno: <strong class="devolver">$' + Math.abs(balance).toFixed(2) + '</strong>';
+        else span.innerHTML = 'Sin diferencia (mismo total).';
+      }
+    }
+
+    function crearLinea(libroSel, maestroSel) {
+      const div = document.createElement('div');
+      div.className = 'linea-libro';
+      div.innerHTML = `
+        <select name="libro_id" class="sel-libro" required></select>
+        <select name="maestro_id" class="sel-maestro" required></select>
+        <button type="button" class="quitar-linea" title="Quitar">✕</button>`;
+      const selLibro = div.querySelector('.sel-libro');
+      const selMaestro = div.querySelector('.sel-maestro');
+      llenarLibros(selLibro, null, false);
+      llenarMaestros(selMaestro, null, false);
+
+      if (libroSel) {
+        selLibro.value = String(libroSel);
+        llenarMaestros(selMaestro, libroAMaestros[String(libroSel)] || [], false);
+        if (maestroSel) selMaestro.value = String(maestroSel);
+      }
+
+      selLibro.addEventListener('change', () => {
+        llenarMaestros(selMaestro, selLibro.value ? (libroAMaestros[selLibro.value] || []) : null, true);
+        recalcular();
+      });
+      selMaestro.addEventListener('change', () => {
+        llenarLibros(selLibro, selMaestro.value ? (maestroALibros[selMaestro.value] || []) : null, true);
+        recalcular();
+      });
+      div.querySelector('.quitar-linea').addEventListener('click', () => { div.remove(); recalcular(); });
+      contenedor.appendChild(div);
+    }
+
+    document.getElementById('agregar-linea').addEventListener('click', () => crearLinea());
+
+    if (ITEMS.length > 0) ITEMS.forEach(it => crearLinea(it.libro_id, it.maestro_id));
+    else crearLinea();
+    recalcular();
+  </script>
+<% } %>

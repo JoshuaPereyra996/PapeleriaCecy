@@ -1,0 +1,36 @@
+<div class="encabezado-seccion">
+  <h2>Comisiones por maestro</h2>
+  <a href="/reportes" class="btn-cancelar">← Reportes</a>
+</div>
+
+<form method="GET" action="/reportes/maestros" class="filtro-fechas no-print">
+  <div><label>Desde</label><input type="date" name="desde" value="<%= desde || '' %>"></div>
+  <div><label>Hasta</label><input type="date" name="hasta" value="<%= hasta || '' %>"></div>
+  <button type="submit" class="btn btn-inline">Filtrar</button>
+  <a href="/reportes/maestros" class="btn-cancelar">Limpiar</a>
+  <button type="button" class="btn-secundario" onclick="window.print()">Imprimir</button>
+</form>
+
+<p class="nota-info no-print">Cada libro tiene un monto fijo de comisión para el maestro. El total de comisión se ve al entrar a "Ver alumnos" de cada maestro.</p>
+
+<% if (filas.length === 0) { %>
+  <p>No hay ventas en el periodo seleccionado.</p>
+<% } else { %>
+  <table class="tabla">
+    <thead>
+      <tr><th>Maestro</th><th>Alumnos</th><th>Libros vendidos</th><th class="no-print"></th></tr>
+    </thead>
+    <tbody>
+      <% filas.forEach(f => { %>
+        <tr>
+          <td><%= f.nombre_completo %></td>
+          <td><%= f.alumnos %></td>
+          <td><%= f.libros_vendidos %></td>
+          <td class="acciones no-print">
+            <a href="/reportes/maestros/<%= f.id %>?desde=<%= desde || '' %>&hasta=<%= hasta || '' %>">Ver alumnos</a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>

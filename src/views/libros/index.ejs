@@ -1,0 +1,32 @@
+<div class="encabezado-seccion">
+  <h2>Libros</h2>
+  <a href="/libros/nuevo" class="btn btn-inline">+ Nuevo libro</a>
+</div>
+<% if (libros.length === 0) { %>
+  <p>Aún no hay libros registrados.</p>
+<% } else { %>
+  <table class="tabla">
+    <thead>
+      <tr><th>Título</th><th>Autor</th><th>Precio</th><th>Margen</th><th>Comisión maestro</th><th>Entregados</th><th>Maestros</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% libros.forEach(libro => { %>
+        <tr>
+          <td><%= libro.titulo %></td>
+          <td><%= libro.autor %></td>
+          <td>$<%= libro.precio %></td>
+          <td>$<%= libro.margen_papeleria %></td>
+          <td>$<%= libro.comision_maestro %></td>
+          <td><%= libro.cantidad_entregada %></td>
+          <td><%= libro.maestros || '—' %></td>
+          <td class="acciones">
+            <a href="/libros/<%= libro.id %>/editar">Editar</a>
+            <form action="/libros/<%= libro.id %>/eliminar" method="POST" onsubmit="return confirm('¿Dar de baja este libro?');">
+              <button type="submit" class="link-rojo">Baja</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>

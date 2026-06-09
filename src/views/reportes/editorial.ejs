@@ -1,0 +1,69 @@
+<div class="encabezado-seccion">
+  <h2>Reporte general — Editorial</h2>
+  <a href="/reportes" class="btn-cancelar">← Reportes</a>
+</div>
+
+<form method="GET" action="/reportes/editorial" class="filtro-fechas no-print">
+  <div><label>Desde</label><input type="date" name="desde" value="<%= desde || '' %>"></div>
+  <div><label>Hasta</label><input type="date" name="hasta" value="<%= hasta || '' %>"></div>
+  <div class="filtro-libros">
+    <label>Libros a mostrar (deja todo vacío para ver todos)</label>
+    <div class="checkbox-lista checkbox-libros">
+      <% librosLista.forEach(l => { %>
+        <label class="checkbox-item">
+          <input type="checkbox" name="libro_id" value="<%= l.id %>" <%= librosSel.includes(String(l.id)) ? 'checked' : '' %>>
+          <%= l.titulo %>
+        </label>
+      <% }) %>
+    </div>
+  </div>
+  <div class="filtro-botones">
+    <button type="submit" class="btn btn-inline">Filtrar</button>
+    <a href="/reportes/editorial" class="btn-cancelar">Limpiar</a>
+    <button type="button" class="btn-secundario" onclick="window.print()">Imprimir</button>
+  </div>
+</form>
+
+<% const mostrarStock = !desde && !hasta; %>
+
+<% if (filas.length === 0) { %>
+  <p>No hay ventas en el periodo seleccionado.</p>
+<% } else { %>
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Libro</th><th>Precio</th><th>Unidades vendidas</th>
+        <% if (mostrarStock) { %><th>Restantes en stock</th><% } %>
+        <th>Total cobrado</th><th>Margen papelería</th><th>Para la editorial</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% filas.forEach(f => { %>
+        <tr>
+          <td><%= f.titulo %></td>
+          <td>$<%= Number(f.precio).toFixed(2) %></td>
+          <td><%= f.unidades %></td>
+          <% if (mostrarStock) { %>
+            <td class="<%= f.restantes < 0 ? 'stock-negativo' : '' %>"><%= f.restantes %></td>
+          <% } %>
+          <td>$<%= Number(f.total_cobrado).toFixed(2) %></td>
+          <td>$<%= Number(f.total_margen).toFixed(2) %></td>
+          <td>$<%= Number(f.total_editorial).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td><strong>Totales</strong></td><td></td>
+        <td><strong><%= totales.unidades %></strong></td>
+        <% if (mostrarStock) { %><td></td><% } %>
+        <td><strong>$<%= totales.cobrado.toFixed(2) %></strong></td>
+        <td><strong>$<%= totales.margen.toFixed(2) %></strong></td>
+        <td><strong>$<%= totales.editorial.toFixed(2) %></strong></td>
+      </tr>
+    </tfoot>
+  </table>
+  <% if (!mostrarStock) { %>
+    <p class="nota-info">La columna de stock se oculta al filtrar por fechas, porque el cálculo de unidades restantes solo es correcto sobre el total histórico de ventas.</p>
+  <% } %>
+<% } %>

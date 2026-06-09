@@ -1,0 +1,32 @@
+<div class="encabezado-seccion">
+  <h2>Maestro: <%= maestro.nombre_completo %></h2>
+  <a href="/reportes/maestros" class="btn-cancelar">← Volver</a>
+</div>
+<button type="button" class="btn-secundario no-print" onclick="window.print()">Imprimir</button>
+
+<% if (items.length === 0) { %>
+  <p>Este maestro no tiene ventas en el periodo.</p>
+<% } else { %>
+  <table class="tabla">
+    <thead>
+      <tr><th>Alumno</th><th>Grado/Grupo</th><th>Turno</th><th>Libro</th><th>Fecha</th></tr>
+    </thead>
+    <tbody>
+      <% let total = 0; items.forEach(it => { total += Number(it.comision_maestro); %>
+        <tr>
+          <td><%= it.alumno_nombre %></td>
+          <td><%= it.grado %>° <%= it.grupo %></td>
+          <td><%= it.turno %></td>
+          <td><%= it.libro %></td>
+          <td><%= new Date(it.fecha).toLocaleDateString('es-MX') %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="text-align:right;"><strong>Total comisión</strong></td>
+        <td><strong>$<%= total.toFixed(2) %></strong></td>
+      </tr>
+    </tfoot>
+  </table>
+<% } %>
