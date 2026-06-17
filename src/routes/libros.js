@@ -2,13 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// Convierte el valor de los checkboxes en un arreglo
 function aArreglo(valor) {
   if (!valor) return [];
   return Array.isArray(valor) ? valor : [valor];
 }
 
-// Listado con maestros asignados
 router.get('/', async (req, res) => {
   const [libros] = await db.query(`
     SELECT l.*,
@@ -29,12 +27,12 @@ router.get('/nuevo', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { titulo, autor, precio, margen_papeleria, comision_maestro, cantidad_entregada } = req.body;
+  const { titulo, autor, precio, cantidad_entregada } = req.body;
   const maestrosSel = aArreglo(req.body.maestros);
   try {
     const [resultado] = await db.query(
-      'INSERT INTO libros (titulo, autor, precio, margen_papeleria, comision_maestro, cantidad_entregada) VALUES (?, ?, ?, ?, ?, ?)',
-      [titulo, autor, precio, margen_papeleria || 0, comision_maestro || 0, cantidad_entregada || 0]
+      'INSERT INTO libros (titulo, autor, precio, cantidad_entregada) VALUES (?, ?, ?, ?)',
+      [titulo, autor, precio, cantidad_entregada || 0]
     );
     const libroId = resultado.insertId;
     for (const maestroId of maestrosSel) {
@@ -58,12 +56,12 @@ router.get('/:id/editar', async (req, res) => {
 });
 
 router.post('/:id', async (req, res) => {
-  const { titulo, autor, precio, margen_papeleria, comision_maestro, cantidad_entregada } = req.body;
+  const { titulo, autor, precio, cantidad_entregada } = req.body;
   const maestrosSel = aArreglo(req.body.maestros);
   try {
     await db.query(
-      'UPDATE libros SET titulo = ?, autor = ?, precio = ?, margen_papeleria = ?, comision_maestro = ?, cantidad_entregada = ? WHERE id = ?',
-      [titulo, autor, precio, margen_papeleria || 0, comision_maestro || 0, cantidad_entregada || 0, req.params.id]
+      'UPDATE libros SET titulo = ?, autor = ?, precio = ?, cantidad_entregada = ? WHERE id = ?',
+      [titulo, autor, precio, cantidad_entregada || 0, req.params.id]
     );
     await db.query('DELETE FROM libro_maestro WHERE libro_id = ?', [req.params.id]);
     for (const maestroId of maestrosSel) {

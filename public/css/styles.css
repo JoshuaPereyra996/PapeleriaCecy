@@ -95,3 +95,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f4f5f7; c
 .checkbox-libros { max-height: 160px; overflow-y: auto; flex-direction: row; flex-wrap: wrap; gap: .4rem 1.2rem; }
 .checkbox-libros .checkbox-item { width: auto; }
 .filtro-botones { display: flex; gap: 1rem; align-items: center; flex: 1 1 100%; }
+
+.formulario textarea { width:100%; padding:.6rem; border:1px solid #d1d5db; border-radius:6px; font-size:1rem; font-family:inherit; margin-bottom:1rem; resize:vertical; }
+.ticket-box { background:#f8fafc; border:1px solid #e2e8f0; padding:1rem; border-radius:8px; margin-bottom:1rem; }
+.ticket-box input[type="email"] { margin-top:.6rem; padding:.6rem; border:1px solid #d1d5db; border-radius:6px; width:100%; }

@@ -1,0 +1,1 @@
+ALTER TABLE ventas ADD COLUMN notas TEXT NULL AFTER especialidad;

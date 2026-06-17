@@ -14,7 +14,7 @@
     <label>Nombre del alumno</label>
     <input type="text" name="alumno_nombre" value="<%= venta ? venta.alumno_nombre : '' %>" required>
 
-   <div class="fila-doble">
+    <div class="fila-doble">
       <div>
         <label>Grado</label>
         <select name="grado" required>
@@ -60,12 +60,23 @@
     <div id="lineas"></div>
     <button type="button" id="agregar-linea" class="btn-secundario">+ Agregar otro libro</button>
 
+    <label>Notas (opcional)</label>
+    <textarea name="notas" rows="2" placeholder="Alguna descripción o aclaración de la venta"><%= venta && venta.notas ? venta.notas : '' %></textarea>
+
     <div class="total-preview">Total de la venta: <strong id="total-texto">$0.00</strong></div>
 
     <% if (venta && venta.id) { %>
       <div class="balance-box">
         Total anterior: <strong>$<%= totalAnterior.toFixed(2) %></strong><br>
         <span id="balance-texto"></span>
+      </div>
+    <% } else { %>
+      <div class="ticket-box">
+        <label class="checkbox-item">
+          <input type="checkbox" name="enviar_ticket" id="enviar_ticket" value="1">
+          ¿Enviar ticket por correo al terminar?
+        </label>
+        <input type="email" name="correo_ticket" id="correo_ticket" placeholder="correo@ejemplo.com" style="display:none;">
       </div>
     <% } %>
 
@@ -91,7 +102,6 @@
 
     const contenedor = document.getElementById('lineas');
     const totalTexto = document.getElementById('total-texto');
-
     function opcion(v, t) { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }
 
     function llenarLibros(sel, permitidos, conservar) {
@@ -102,7 +112,6 @@
             .forEach(l => sel.appendChild(opcion(l.id, l.titulo + ' ($' + l.precio + ')')));
       if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
     }
-
     function llenarMaestros(sel, permitidos, conservar) {
       const actual = conservar ? sel.value : '';
       sel.innerHTML = '';
@@ -112,7 +121,6 @@
       if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
       if (permitidos && permitidos.length === 1) sel.value = permitidos[0];
     }
-
     function recalcular() {
       let total = 0;
       contenedor.querySelectorAll('.sel-libro').forEach(s => {
@@ -128,7 +136,6 @@
         else span.innerHTML = 'Sin diferencia (mismo total).';
       }
     }
-
     function crearLinea(libroSel, maestroSel) {
       const div = document.createElement('div');
       div.className = 'linea-libro';
@@ -140,13 +147,11 @@
       const selMaestro = div.querySelector('.sel-maestro');
       llenarLibros(selLibro, null, false);
       llenarMaestros(selMaestro, null, false);
-
       if (libroSel) {
         selLibro.value = String(libroSel);
         llenarMaestros(selMaestro, libroAMaestros[String(libroSel)] || [], false);
         if (maestroSel) selMaestro.value = String(maestroSel);
       }
-
       selLibro.addEventListener('change', () => {
         llenarMaestros(selMaestro, selLibro.value ? (libroAMaestros[selLibro.value] || []) : null, true);
         recalcular();
@@ -158,11 +163,19 @@
       div.querySelector('.quitar-linea').addEventListener('click', () => { div.remove(); recalcular(); });
       contenedor.appendChild(div);
     }
-
     document.getElementById('agregar-linea').addEventListener('click', () => crearLinea());
-
     if (ITEMS.length > 0) ITEMS.forEach(it => crearLinea(it.libro_id, it.maestro_id));
     else crearLinea();
     recalcular();
+
+    // Mostrar el campo de correo solo si se marca el ticket
+    const chkTicket = document.getElementById('enviar_ticket');
+    const inpCorreo = document.getElementById('correo_ticket');
+    if (chkTicket) {
+      chkTicket.addEventListener('change', () => {
+        inpCorreo.style.display = chkTicket.checked ? 'block' : 'none';
+        inpCorreo.required = chkTicket.checked;
+      });
+    }
   </script>
 <% } %>

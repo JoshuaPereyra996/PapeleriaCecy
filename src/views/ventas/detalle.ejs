@@ -8,6 +8,7 @@
   <p><strong>Grado/Grupo:</strong> <%= venta.grado %>° <%= venta.grupo %></p>
   <p><strong>Turno:</strong> <%= venta.turno %></p>
   <p><strong>Especialidad:</strong> <%= venta.especialidad %></p>
+  <% if (venta.notas) { %><p><strong>Notas:</strong> <%= venta.notas %></p><% } %>
   <p><strong>Fecha:</strong> <%= new Date(venta.fecha).toLocaleString('es-MX') %></p>
 </div>
 

@@ -7,7 +7,7 @@
 <% } else { %>
   <table class="tabla">
     <thead>
-      <tr><th>Título</th><th>Autor</th><th>Precio</th><th>Margen</th><th>Comisión maestro</th><th>Entregados</th><th>Maestros</th><th>Acciones</th></tr>
+      <tr><th>Título</th><th>Autor</th><th>Precio</th><th>Entregados</th><th>Maestros</th><th>Acciones</th></tr>
     </thead>
     <tbody>
       <% libros.forEach(libro => { %>
@@ -15,8 +15,6 @@
           <td><%= libro.titulo %></td>
           <td><%= libro.autor %></td>
           <td>$<%= libro.precio %></td>
-          <td>$<%= libro.margen_papeleria %></td>
-          <td>$<%= libro.comision_maestro %></td>
           <td><%= libro.cantidad_entregada %></td>
           <td><%= libro.maestros || '—' %></td>
           <td class="acciones">

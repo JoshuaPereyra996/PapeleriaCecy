@@ -10,12 +10,6 @@
   <label>Precio al alumno</label>
   <input type="number" step="0.01" name="precio" value="<%= libro ? libro.precio : '' %>" required>
 
-  <label>Margen para la papelería (por unidad)</label>
-  <input type="number" step="0.01" name="margen_papeleria" value="<%= libro ? libro.margen_papeleria : '0' %>">
-
-  <label>Comisión para el maestro (monto fijo por este libro)</label>
-  <input type="number" step="0.01" name="comision_maestro" value="<%= libro ? libro.comision_maestro : '0' %>">
-
   <label>Cantidad entregada por la editorial</label>
   <input type="number" name="cantidad_entregada" value="<%= libro ? libro.cantidad_entregada : '0' %>">
 
