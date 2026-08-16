@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pokédex TCG · Demo local</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --red-900:#5e0f14; --red-800:#7d1620; --red-700:#a8202c;
+  --red-600:#c62b33; --red-500:#e23a3a;
+  --steel-900:#0c1016; --steel-800:#141a23; --steel-700:#1d2530;
+  --steel-600:#2a3543; --steel-500:#3c4a5c;
+  --screen:#0a1a14; --screen-2:#0e2820;
+  --lcd:#7dfcb0; --lcd-dim:#3f8f66;
+  --amber:#ffcb3d; --cyan:#5ad9ff; --blue:#2f7ce0;
+  --txt:#e8eef5; --txt-dim:#93a3b5;
+  --ok:#39d98a; --miss:#5b6b7d;
+  --radius:14px;
+  --font: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font); color:var(--txt); background:
+    radial-gradient(1100px 600px at 15% -10%, #2a3240 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, #3a1c22 0%, transparent 55%),
+    var(--steel-900);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit; cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--steel-800)}
+::-webkit-scrollbar-thumb{background:var(--steel-600);border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:var(--steel-500)}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.device{max-width:1500px;margin:0 auto;padding:18px}
+.hood{
+  background:linear-gradient(175deg,var(--red-600) 0%,var(--red-700) 45%,var(--red-800) 100%);
+  border-radius:var(--radius) var(--radius) 6px 6px;
+  border:1px solid rgba(0,0,0,.45);
+  box-shadow:0 18px 45px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22);
+  padding:16px 18px; position:relative; overflow:hidden;
+}
+.hood::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(105deg,rgba(255,255,255,.10) 0 38%,transparent 38.5%);
+  pointer-events:none;
+}
+.hood-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.lens{
+  width:62px;height:62px;border-radius:50%;flex:0 0 auto;
+  background:radial-gradient(circle at 32% 28%, #dff3ff 0 8%, #74c8ff 22%, var(--blue) 55%, #103a72 100%);
+  border:5px solid #f2f4f7;
+  box-shadow:0 0 0 3px rgba(0,0,0,.35), 0 0 26px rgba(90,217,255,.55), inset -4px -6px 12px rgba(0,0,0,.35);
+  animation:pulse 3.4s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 18px rgba(90,217,255,.35),inset -4px -6px 12px rgba(0,0,0,.35)}
+50%{box-shadow:0 0 0 3px rgba(0,0,0,.35),0 0 34px rgba(90,217,255,.75),inset -4px -6px 12px rgba(0,0,0,.35)}}
+.leds{display:flex;gap:9px;align-items:center}
+.led{width:15px;height:15px;border-radius:50%;border:2px solid rgba(0,0,0,.35);box-shadow:inset -2px -3px 5px rgba(0,0,0,.4)}
+.led.r{background:radial-gradient(circle at 32% 28%,#ffb3b3,#e23a3a 60%,#7a1414)}
+.led.y{background:radial-gradient(circle at 32% 28%,#fff0b8,#ffcb3d 60%,#8a6300)}
+.led.g{background:radial-gradient(circle at 32% 28%,#c6ffd9,#39d98a 60%,#0d6b3c)}
+.led.busy{animation:blink .7s steps(2,end) infinite}
+@keyframes blink{50%{filter:brightness(.35)}}
+.brand{margin-left:auto;text-align:right}
+.brand h1{margin:0;font-size:20px;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+.brand span{font-size:11px;letter-spacing:.3em;color:#ffe0e0;opacity:.85}
+
+/* progress readouts */
+.gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.gauge{
+  background:linear-gradient(180deg,var(--screen-2),var(--screen));
+  border:2px solid rgba(0,0,0,.5); border-radius:10px; padding:10px 13px;
+  box-shadow:inset 0 0 26px rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,.10);
+}
+.gauge .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--lcd-dim)}
+.gauge .val{font-family:var(--mono);font-size:19px;color:var(--lcd);text-shadow:0 0 10px rgba(125,252,176,.45);margin-top:2px}
+.bar{height:8px;border-radius:5px;background:#0a1a14;border:1px solid #1d4436;margin-top:8px;overflow:hidden}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--lcd-dim),var(--lcd));box-shadow:0 0 10px rgba(125,252,176,.7);transition:width .45s ease}
+
+/* ============================================================
+   BODY PANEL
+   ============================================================ */
+.panel{
+  background:linear-gradient(180deg,var(--steel-700),var(--steel-800));
+  border:1px solid rgba(255,255,255,.08); border-top:none;
+  border-radius:0 0 var(--radius) var(--radius);
+  box-shadow:0 18px 45px rgba(0,0,0,.5);
+  padding:16px 18px 26px;
+}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{
+  background:var(--steel-600);color:var(--txt-dim);border:1px solid rgba(255,255,255,.09);
+  padding:10px 16px;border-radius:9px;font-size:13px;font-weight:600;letter-spacing:.04em;transition:.15s;
+}
+.tab:hover{color:var(--txt);background:var(--steel-500)}
+.tab.on{background:linear-gradient(180deg,var(--red-600),var(--red-700));color:#fff;border-color:rgba(0,0,0,.4);box-shadow:0 0 16px rgba(226,58,58,.35)}
+
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{
+  flex:1 1 260px;min-width:200px;display:flex;align-items:center;gap:8px;
+  background:var(--steel-900);border:1px solid var(--steel-600);border-radius:9px;padding:0 12px;
+}
+.search input{
+  flex:1;background:transparent;border:none;outline:none;color:var(--lcd);
+  font-family:var(--mono);font-size:14px;padding:11px 0;
+}
+.search input::placeholder{color:#4a5a6b}
+.search .ic{color:var(--lcd-dim);font-size:14px}
+select,.btn{
+  background:var(--steel-600);color:var(--txt);border:1px solid rgba(255,255,255,.10);
+  border-radius:9px;padding:10px 13px;font-size:13px;font-family:inherit;outline:none;
+}
+select{cursor:pointer}
+.btn:hover{background:var(--steel-500)}
+.btn.sm{padding:7px 11px;font-size:12px}
+.seg{display:flex;background:var(--steel-900);border:1px solid var(--steel-600);border-radius:9px;overflow:hidden}
+.seg button{background:transparent;border:none;color:var(--txt-dim);padding:10px 14px;font-size:12.5px;font-weight:600}
+.seg button.on{background:var(--red-700);color:#fff}
+.spacer{flex:1}
+
+.hint{font-size:12px;color:var(--txt-dim);margin:-4px 0 12px}
+.count{font-family:var(--mono);font-size:12px;color:var(--lcd-dim)}
+
+/* ============================================================
+   GRID · MODULO 1
+   ============================================================ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:11px}
+.slot{
+  position:relative;background:linear-gradient(180deg,var(--steel-600),var(--steel-700));
+  border:1px solid rgba(255,255,255,.07);border-radius:11px;overflow:hidden;
+  cursor:pointer;transition:transform .12s, box-shadow .18s, border-color .18s;
+  display:flex;flex-direction:column;
+}
+.slot:hover{transform:translateY(-3px);border-color:rgba(125,252,176,.4);box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.slot .num{
+  position:absolute;top:6px;left:6px;z-index:2;font-family:var(--mono);font-size:10px;
+  background:rgba(0,0,0,.62);color:var(--lcd);padding:2px 6px;border-radius:5px;letter-spacing:.06em;
+}
+.slot .dot{position:absolute;top:7px;right:7px;z-index:2;width:9px;height:9px;border-radius:50%;background:var(--miss);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+.slot.own .dot{background:var(--ok);box-shadow:0 0 9px var(--ok),0 0 0 2px rgba(0,0,0,.4)}
+/* LED rojo: "la tengo, pero busco su arte alterno / otra rareza".
+   A la izquierda del verde y sólo en slots que ya tienen carta asignada. */
+.slot .altbtn{
+  position:absolute;top:5px;right:21px;z-index:3;width:13px;height:13px;padding:0;
+  border-radius:50%;border:2px solid rgba(0,0,0,.4);background:#46525f;
+  box-shadow:inset -1px -2px 3px rgba(0,0,0,.45);cursor:pointer;transition:.15s;
+}
+.slot .altbtn:hover{transform:scale(1.25);background:#6a4048}
+.slot .altbtn:focus-visible{outline:2px solid var(--lcd);outline-offset:2px}
+.slot.alt-on .altbtn{
+  background:radial-gradient(circle at 32% 28%,#ffc2c2,var(--red-500) 60%,#7a1414);
+  box-shadow:0 0 10px var(--red-500),0 0 0 2px rgba(0,0,0,.4);
+  animation:altPulse 2.2s ease-in-out infinite;
+}
+@keyframes altPulse{50%{box-shadow:0 0 4px var(--red-500),0 0 0 2px rgba(0,0,0,.4)}}
+.slot.own.alt-on{border-color:rgba(226,58,58,.75)}
+.slot.own.alt-on .art{box-shadow:inset 0 0 30px rgba(226,58,58,.30)}
+.slot.own.alt-on .nm{color:#ffc9c9;border-top-color:rgba(226,58,58,.35)}
+.slot.own.alt-on:hover{border-color:var(--red-500);box-shadow:0 10px 26px rgba(226,58,58,.45)}
+.slot .art{
+  aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.06),transparent 70%);
+}
+.slot .art img{width:88%;height:88%;object-fit:contain}
+.slot.miss .art img{filter:grayscale(1) brightness(.55);opacity:.5;image-rendering:pixelated}
+.slot.own{border-color:rgba(57,217,138,.45)}
+.slot.own .art{padding:0;background:#0d1218}
+.slot.own .art img{width:100%;height:100%;object-fit:contain}
+.slot .nm{
+  padding:6px 7px 8px;font-size:11.5px;text-align:center;text-transform:capitalize;
+  color:var(--txt-dim);border-top:1px solid rgba(255,255,255,.06);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.slot.own .nm{color:var(--txt)}
+
+/* ============================================================
+   GRID · MODULO 2
+   ============================================================ */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:13px}
+.card{
+  background:var(--steel-700);border:1px solid rgba(255,255,255,.07);border-radius:11px;
+  overflow:hidden;display:flex;flex-direction:column;transition:.15s;
+}
+.card:hover{border-color:rgba(90,217,255,.4);box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.card.own{border-color:rgba(57,217,138,.55);box-shadow:0 0 0 1px rgba(57,217,138,.25)}
+.card .img{position:relative;background:#0d1218;cursor:zoom-in}
+.card .img img{width:100%;display:block;aspect-ratio:245/342;object-fit:contain}
+.card.miss .img img{filter:grayscale(.85) brightness(.6);opacity:.65}
+.card .rar{
+  position:absolute;bottom:6px;left:6px;font-size:9px;font-weight:800;letter-spacing:.08em;
+  padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.72);
+}
+.rar.ar{color:var(--cyan);border:1px solid rgba(90,217,255,.4)}
+.rar.sar{color:var(--amber);border:1px solid rgba(255,203,61,.45)}
+.card .meta{padding:8px 9px 6px}
+.card .meta b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .meta small{display:block;font-size:10.5px;color:var(--txt-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.card .act{display:flex;gap:6px;padding:0 9px 9px;align-items:center}
+.toggle{
+  flex:1;border:1px solid rgba(255,255,255,.12);background:var(--steel-600);color:var(--txt-dim);
+  border-radius:8px;padding:7px;font-size:11.5px;font-weight:700;letter-spacing:.03em;
+}
+.toggle:hover{background:var(--steel-500);color:var(--txt)}
+.card.own .toggle{background:rgba(57,217,138,.16);color:var(--ok);border-color:rgba(57,217,138,.5)}
+.cond{width:64px;padding:6px;font-size:11px;background:var(--steel-900);color:var(--lcd);border:1px solid var(--steel-600);border-radius:8px}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.ovl{position:fixed;inset:0;background:rgba(3,6,10,.86);backdrop-filter:blur(4px);z-index:60;display:none;padding:22px;overflow:auto}
+.ovl.on{display:block}
+.modal{
+  max-width:1080px;margin:0 auto;background:linear-gradient(180deg,var(--steel-700),var(--steel-800));
+  border:1px solid rgba(255,255,255,.12);border-radius:15px;box-shadow:0 28px 70px rgba(0,0,0,.7);overflow:hidden;
+}
+.modal header{
+  display:flex;align-items:center;gap:13px;padding:14px 17px;
+  background:linear-gradient(180deg,var(--red-600),var(--red-800));border-bottom:1px solid rgba(0,0,0,.4);
+}
+.modal header img{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.modal header h3{margin:0;font-size:17px;text-transform:capitalize}
+.modal header p{margin:2px 0 0;font-size:11.5px;color:#ffdede;font-family:var(--mono)}
+.x{margin-left:auto;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.2);color:#fff;width:34px;height:34px;border-radius:9px;font-size:17px;line-height:1}
+.modal .body{padding:16px 17px 22px;max-height:72vh;overflow:auto}
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:12px}
+.pick .p{background:var(--steel-600);border:2px solid transparent;border-radius:10px;overflow:hidden;cursor:pointer;transition:.14s}
+.pick .p:hover{border-color:var(--lcd);transform:translateY(-3px)}
+.pick .p.sel{border-color:var(--ok);box-shadow:0 0 18px rgba(57,217,138,.4)}
+.pick .p img{width:100%;display:block;aspect-ratio:245/342;object-fit:contain;background:#0d1218}
+.pick .p .t{padding:6px 7px;font-size:10.5px;color:var(--txt-dim);line-height:1.35}
+.pick .p .t b{display:block;color:var(--txt);font-size:11.5px}
+.zoom{max-width:520px;margin:0 auto;display:block;width:100%;border-radius:12px}
+
+.state{padding:44px 18px;text-align:center;color:var(--txt-dim);font-size:13.5px}
+.warn{
+  background:rgba(255,203,61,.10);border:1px solid rgba(255,203,61,.42);color:#ffe9ae;
+  border-radius:10px;padding:11px 14px;margin-bottom:13px;font-size:12.5px;line-height:1.55;
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+}
+.warn b{color:var(--amber)}
+.warn .btn{margin-left:auto}
+.state .sp{
+  width:32px;height:32px;margin:0 auto 14px;border-radius:50%;
+  border:3px solid var(--steel-600);border-top-color:var(--lcd);animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{color:#ff9b9b}
+
+.foot{margin-top:20px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.foot small{color:var(--txt-dim);font-size:11.5px}
+
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);
+  background:var(--steel-600);border:1px solid rgba(125,252,176,.4);color:var(--lcd);
+  padding:11px 18px;border-radius:10px;font-size:13px;z-index:90;transition:transform .28s;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);font-family:var(--mono);
+}
+.toast.on{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:600px){
+  .device{padding:9px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+  .cards{grid-template-columns:repeat(auto-fill,minmax(142px,1fr))}
+  .brand{margin-left:0;text-align:left;width:100%}
+  .modal .body{max-height:78vh}
+}
+</style>
+</head>
+<body>
+<div class="device">
+
+  <!-- ================= HOOD ================= -->
+  <div class="hood">
+    <div class="hood-top">
+      <div class="lens"></div>
+      <div class="leds">
+        <div class="led r" id="ledR"></div>
+        <div class="led y" id="ledY"></div>
+        <div class="led g" id="ledG"></div>
+      </div>
+      <div class="brand">
+        <h1>Pokédex TCG</h1>
+        <span>DEMO LOCAL · sin servidor</span>
+      </div>
+    </div>
+    <div class="gauges">
+      <div class="gauge">
+        <div class="lbl">Pokédex Nacional · 1 carta por especie</div>
+        <div class="val" id="gNat">— / —</div>
+        <div class="bar"><i id="gNatBar" style="width:0%"></i></div>
+      </div>
+      <div class="gauge">
+        <div class="lbl">Master Set AR / SAR · Scarlet &amp; Violet</div>
+        <div class="val" id="gIr">— / —</div>
+        <div class="bar"><i id="gIrBar" style="width:0%"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PANEL ================= -->
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab on" data-view="nat">📕 Pokédex Nacional</button>
+      <button class="tab" data-view="ir">✨ Illustration Rares (SV)</button>
+      <button class="tab" data-view="cfg">⚙️ Datos</button>
+    </div>
+
+    <!-- ---------- VISTA NACIONAL ---------- -->
+    <section id="vNat">
+      <div class="toolbar">
+        <div class="search">
+          <span class="ic">🔍</span>
+          <input id="qNat" placeholder="Buscar por nombre o número (ej. pikachu, 25)" autocomplete="off">
+        </div>
+        <div class="seg" id="fNat">
+          <button class="on" data-f="all">Todos</button>
+          <button data-f="own">Obtenidas</button>
+          <button data-f="miss">Faltantes</button>
+          <button data-f="alt" title="Cartas que tengo pero cuya versión alterna sigo buscando">🔴 Busco alterna</button>
+        </div>
+        <select id="tNat"><option value="">Todos los tipos</option></select>
+        <select id="gNatSel"><option value="">Todas las generaciones</option></select>
+      </div>
+      <div class="hint" id="hNat"></div>
+      <div id="natBody"><div class="state"><div class="sp"></div>Inicializando Pokédex Nacional…</div></div>
+    </section>
+
+    <!-- ---------- VISTA ILLUSTRATION RARES ---------- -->
+    <section id="vIr" style="display:none">
+      <div class="toolbar">
+        <div class="search">
+          <span class="ic">🔍</span>
+          <input id="qIr" placeholder="Buscar carta, ilustrador o expansión" autocomplete="off">
+        </div>
+        <div class="seg" id="fIr">
+          <button class="on" data-f="all">Todas</button>
+          <button data-f="own">Tengo</button>
+          <button data-f="miss">Me falta</button>
+        </div>
+        <select id="rIr">
+          <option value="">AR + SAR</option>
+          <option value="Illustration Rare">Solo Illustration Rare</option>
+          <option value="Special Illustration Rare">Solo Special Illustration Rare</option>
+        </select>
+        <select id="sIr"><option value="">Todas las expansiones</option></select>
+        <select id="tIr"><option value="">Todos los tipos</option></select>
+        <select id="serIr">
+          <option value="Scarlet &amp; Violet" selected>Era: Escarlata y Púrpura</option>
+          <option value="Mega Evolution">Era: Mega Evolution</option>
+        </select>
+        <button class="btn" id="loadIr">Cargar catálogo</button>
+      </div>
+      <div class="hint" id="hIr"></div>
+      <div id="irBody"><div class="state">Pulsa <b>Cargar catálogo</b> para traer las cartas AR / SAR de Escarlata y Púrpura.<br><small>Una consulta por expansión (~18) y queda en caché local 7 días.</small></div></div>
+    </section>
+
+    <!-- ---------- VISTA DATOS ---------- -->
+    <section id="vCfg" style="display:none">
+      <div class="state" style="text-align:left;padding:8px 0">
+        <p style="color:var(--txt);font-size:14px;margin-top:0"><b>Origen de los datos de cartas</b></p>
+        <div class="toolbar" style="margin-bottom:8px">
+          <div class="search" style="flex:1 1 320px">
+            <span class="ic">🔌</span>
+            <input id="apiBase" placeholder="http://localhost:3001  (vacío = modo directo)" autocomplete="off">
+          </div>
+          <button class="btn" id="btnProbe">Probar conexión</button>
+        </div>
+        <div id="apiInfo" class="hint"></div>
+        <p style="font-size:12.5px;color:var(--txt-dim);line-height:1.65;margin:4px 0 20px">
+          Con el <b>gateway Node</b> corriendo, la app le pide todo a él: elige el proveedor
+          (pokemontcg.io o Scrydex), guarda la API key fuera del navegador, cachea y absorbe los
+          cortes 502. Sin gateway funciona igual en <b>modo directo</b> contra pokemontcg.io, que
+          es gratis pero inestable. <b>Scrydex sólo funciona vía gateway</b>: exige plan de pago,
+          API key y Team ID, y su documentación prohíbe expresamente poner la key en el cliente.
+        </p>
+        <p style="color:var(--txt);font-size:14px;margin-top:0"><b>Persistencia local</b> — tu avance vive en <code>localStorage</code> de este navegador con la clave <code>pokedex_tcg_alpha_v1</code>. El catálogo de cartas se cachea en IndexedDB por 7 días para respetar el rate limit de pokemontcg.io.</p>
+        <div class="foot" style="border:none;margin:0;padding:0">
+          <button class="btn" id="btnExport">⬇ Exportar colección (.json)</button>
+          <button class="btn" id="btnImport">⬆ Importar colección</button>
+          <button class="btn" id="btnSeed">🧪 Cargar datos de ejemplo</button>
+          <button class="btn" id="btnClearCache">🧹 Vaciar caché de API</button>
+          <button class="btn" id="btnReset" style="border-color:rgba(226,58,58,.5);color:#ff9b9b">⚠ Borrar colección</button>
+          <input type="file" id="fileImport" accept="application/json" style="display:none">
+        </div>
+        <pre id="cfgDump" style="margin-top:18px;background:var(--steel-900);border:1px solid var(--steel-600);border-radius:10px;padding:14px;font-family:var(--mono);font-size:11.5px;color:var(--lcd-dim);max-height:340px;overflow:auto;white-space:pre-wrap"></pre>
+      </div>
+    </section>
+
+    <div class="foot">
+      <small>Datos: <b>PokéAPI</b> · <b>Pokémon TCG API</b> — imágenes propiedad de The Pokémon Company. Proyecto personal sin fines comerciales.</small>
+      <span class="spacer"></span>
+      <small id="apiMode" class="count">detectando…</small>
+      <small id="netStat" class="count">red: inactiva</small>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div class="ovl" id="ovl">
+  <div class="modal">
+    <header>
+      <img id="mImg" alt="">
+      <div>
+        <h3 id="mTitle">—</h3>
+        <p id="mSub">—</p>
+      </div>
+      <button class="x" id="mClose">✕</button>
+    </header>
+    <div class="body" id="mBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   POKÉDEX TCG · ALPHA
+   Prototipo de una sola página. Sin build, sin backend.
+   Capas:  cache(IndexedDB) → queue(rate limit) → api → store → views
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- config -- */
+const CFG = {
+  STORE_KEY   : "pokedex_tcg_alpha_v1",
+  BASE_KEY    : "pokedex_tcg_api_base",
+  POKEAPI     : "https://pokeapi.co/api/v2",
+  TCG         : "https://api.pokemontcg.io/v2",
+  TCG_KEY     : "",                 // ← pega aquí tu API key de pokemontcg.io (opcional)
+  API_BASE    : "http://localhost:3001",   // gateway Node; si no responde, modo directo
+  CACHE_TTL   : 7 * 24 * 3600 * 1000,
+  RETRIES     : 5,                  // la API cae seguido; conviene insistir
+  BACKOFF     : 700,                // ms, se duplica en cada intento (+jitter)
+  MAX_SPECIES : 10000,              // ids > 10000 son formas alternas, no especies
+  CARD_SELECT : "id,name,number,rarity,artist,images,set,nationalPokedexNumbers,types",
+  ART: id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+  SPRITE: id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
+};
+
+const GENS = [
+  ["Gen I · Kanto",1,151],   ["Gen II · Johto",152,251], ["Gen III · Hoenn",252,386],
+  ["Gen IV · Sinnoh",387,493],["Gen V · Teselia",494,649],["Gen VI · Kalos",650,721],
+  ["Gen VII · Alola",722,809],["Gen VIII · Galar",810,905],["Gen IX · Paldea",906,1025],
+];
+
+const TYPE_ES = {normal:"Normal",fire:"Fuego",water:"Agua",electric:"Eléctrico",grass:"Planta",
+  ice:"Hielo",fighting:"Lucha",poison:"Veneno",ground:"Tierra",flying:"Volador",psychic:"Psíquico",
+  bug:"Bicho",rock:"Roca",ghost:"Fantasma",dragon:"Dragón",dark:"Siniestro",steel:"Acero",fairy:"Hada"};
+
+/* ------------------------------------------------------------- utilidades -- */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const pad = n => String(n).padStart(4,"0");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+const pct = (a,b) => b ? Math.round(a / b * 100) : 0;
+
+let toastTimer;
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("on"), 2200);
+}
+
+/* ------------------------------------------------------- caché (IndexedDB) -- */
+const Cache = (() => {
+  let dbp = null;
+  function db(){
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      const r = indexedDB.open("pokedex_tcg_cache", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result);
+      r.onerror   = () => rej(r.error);
+    }).catch(() => null);           // modo privado / IDB bloqueada → sin caché
+    return dbp;
+  }
+  const tx = async (mode, fn) => {
+    const d = await db(); if (!d) return null;
+    return new Promise((res, rej) => {
+      const t = d.transaction("kv", mode);
+      const rq = fn(t.objectStore("kv"));
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror   = () => rej(rq.error);
+    }).catch(() => null);
+  };
+  return {
+    async get(k){
+      const v = await tx("readonly", s => s.get(k));
+      if (!v) return null;
+      if (Date.now() - v.ts > CFG.CACHE_TTL) return null;
+      return v.data;
+    },
+    set : (k,data) => tx("readwrite", s => s.put({data, ts:Date.now()}, k)),
+    clear: () => tx("readwrite", s => s.clear()),
+  };
+})();
+
+/* --------------------------------------- cola de red (control rate limit) -- */
+const Net = (() => {
+  let active = 0, pending = 0, last = 0;
+  const MAX = 3, GAP = 90;                 // 3 en paralelo, 90 ms entre lanzamientos
+  const q = [];
+  function paint(){
+    $("#netStat").textContent = active + pending ? `red: ${active} activas · ${pending} en cola` : "red: inactiva";
+    $$("#ledY,#ledG").forEach(l => l.classList.toggle("busy", !!(active + pending)));
+  }
+  function pump(){
+    // reserva el slot ANTES del setTimeout para no exceder MAX concurrentes
+    while (q.length && active < MAX){
+      const job = q.shift(); pending--; active++;
+      const wait = Math.max(0, GAP - (Date.now() - last));
+      last = Date.now() + wait;
+      setTimeout(() => {
+        job.run().then(job.res, job.rej).finally(() => { active--; paint(); pump(); });
+      }, wait);
+    }
+    paint();
+  }
+  return {
+    push(run){
+      return new Promise((res, rej) => { q.push({run,res,rej}); pending++; paint(); pump(); });
+    }
+  };
+})();
+
+const sleep = ms => new Promise(s => setTimeout(s, ms));
+
+/* pokemontcg.io va detrás de Cloudflare y devuelve 502/503 de forma intermitente.
+   La página de error de Cloudflare NO trae cabeceras CORS, así que el navegador
+   no reporta "HTTP 502" sino un TypeError genérico "Failed to fetch". Por eso
+   reintentamos con backoff exponencial tanto los 5xx como los errores de red. */
+async function getJSON(url, opts = {}, onRetry, useCache = true){
+  const hit = useCache ? await Cache.get(url) : null;
+  if (hit) return hit;
+  const data = await Net.push(async () => {
+    let lastErr;
+    for (let i = 0; i < CFG.RETRIES; i++){
+      try{
+        const r = await fetch(url, opts);
+        if (r.status === 429 || r.status >= 500) throw new Error("HTTP " + r.status);
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return await r.json();
+      }catch(e){
+        lastErr = e;
+        if (i === CFG.RETRIES - 1) break;
+        const wait = Math.round(CFG.BACKOFF * Math.pow(2, i) * (0.75 + Math.random() * 0.5));
+        onRetry && onRetry(i + 1, CFG.RETRIES, wait);
+        await sleep(wait);
+      }
+    }
+    const msg = /Failed to fetch|NetworkError|Load failed/i.test(lastErr && lastErr.message || "")
+      ? "la API no respondió (probable 502 de Cloudflare o corte de red)"
+      : (lastErr && lastErr.message) || "fallo de red";
+    throw new Error(msg);
+  });
+  if (useCache) Cache.set(url, data);
+  return data;
+}
+const tcgHeaders = () => CFG.TCG_KEY ? {headers:{"X-Api-Key":CFG.TCG_KEY}} : {};
+
+/* ------------------------------------------------------ capa de proveedor -- */
+/* Dos modos de operación:
+     GATEWAY  Hay un backend Node en API_BASE. Él decide el proveedor
+              (pokemontcg.io o Scrydex), custodia la API key y cachea.
+     DIRECTO  Sin backend: el navegador habla con pokemontcg.io. Gratis y sin
+              key, pero sufre los 502 del proveedor y NO puede usar Scrydex
+              (su key no debe viajar en código de cliente).
+   En ambos casos las cartas llegan con la misma forma, así que ninguna vista
+   necesita saber de dónde salieron.                                          */
+const Api = {
+  mode: "directo",          // "gateway" | "directo"
+  info: null,               // última respuesta de /api/health
+
+  base(){
+    const s = localStorage.getItem(CFG.BASE_KEY);
+    return (s !== null ? s : CFG.API_BASE).replace(/\/+$/, "");
+  },
+  on(){ return this.mode === "gateway"; },
+
+  async detect(){
+    const b = this.base();
+    if (b){
+      try{
+        const r = await fetch(`${b}/api/health`, {
+          signal: AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        this.info = await r.json();
+        this.mode = "gateway";
+        paintMode();
+        return this.mode;
+      }catch(e){ /* backend apagado → seguimos en directo */ }
+    }
+    this.info = null;
+    this.mode = "directo";
+    paintMode();
+    return this.mode;
+  },
+
+  // las respuestas del gateway no se cachean en IndexedDB: el backend ya cachea
+  get(path, onRetry){ return getJSON(this.base() + path, {}, onRetry, false); },
+};
+
+function paintMode(){
+  const el = $("#apiMode"); if (!el) return;
+  if (Api.on()){
+    const i = Api.info || {};
+    el.textContent = `gateway · ${i.provider || "?"}`;
+    el.title = `Backend Node en ${Api.base()} usando ${i.provider}`;
+    el.style.color = "var(--ok)";
+  }else{
+    el.textContent = "directo · pokemontcg.io";
+    el.title = "Sin backend: el navegador consulta pokemontcg.io directamente";
+    el.style.color = "var(--amber)";
+  }
+}
+
+/* --------------------------------------------------------- API: endpoints -- */
+// Equivalente cliente de  GET /api/pokemon/:id  (listado completo en 1 request)
+async function apiSpecies(){
+  if (Api.on()){
+    try{ return (await Api.get("/api/pokemon")).data; }
+    catch(e){ console.warn("gateway sin listado, uso PokéAPI directo:", e.message); }
+  }
+  const j = await getJSON(`${CFG.POKEAPI}/pokemon-species?limit=20000`);
+  return j.results.map(r => {
+    const id = +r.url.split("/").filter(Boolean).pop();
+    return {id, name:r.name};
+  }).filter(p => p.id < CFG.MAX_SPECIES).sort((a,b) => a.id - b.id);
+}
+
+// Mapa tipo → Set(ids). Se carga sólo cuando el usuario usa el filtro de tipo.
+async function apiTypeMap(){
+  const list = (await getJSON(`${CFG.POKEAPI}/type`)).results
+    .filter(t => !["unknown","stellar","shadow"].includes(t.name));
+  const map = {};
+  for (const t of list){
+    const j = await getJSON(t.url);
+    map[t.name] = new Set(j.pokemon.map(p => +p.pokemon.url.split("/").filter(Boolean).pop())
+                                  .filter(id => id < CFG.MAX_SPECIES));
+  }
+  return map;
+}
+
+// Equivalente cliente de  GET /api/cards/pokemon/:nationalId
+async function apiCardsForPokemon(id){
+  if (Api.on()) return (await Api.get(`/api/cards/pokemon/${id}`)).data || [];
+  const url = `${CFG.TCG}/cards?q=${encodeURIComponent("nationalPokedexNumbers:" + id)}`
+            + `&pageSize=250&orderBy=-set.releaseDate,number&select=${CFG.CARD_SELECT}`;
+  return (await getJSON(url, tcgHeaders())).data || [];
+}
+
+// Catálogo de expansiones (1 request). Se usa para resolver los sets de una serie
+// sin depender de  set.series:"Scarlet & Violet"  — el `&` dentro de la consulta
+// es frágil en el parser de la API.
+// Red de seguridad: si /v2/sets está caído, seguimos con esta lista fija.
+// Sólo se pierde la detección automática de expansiones nuevas.
+const SETS_FALLBACK = [
+  {id:"svp",      name:"SV Black Star Promos", series:"Scarlet & Violet", releaseDate:"2023/01/01"},
+  {id:"sv1",      name:"Scarlet & Violet",     series:"Scarlet & Violet", releaseDate:"2023/03/31"},
+  {id:"sve",      name:"SV Energies",          series:"Scarlet & Violet", releaseDate:"2023/03/31"},
+  {id:"sv2",      name:"Paldea Evolved",       series:"Scarlet & Violet", releaseDate:"2023/06/09"},
+  {id:"sv3",      name:"Obsidian Flames",      series:"Scarlet & Violet", releaseDate:"2023/08/11"},
+  {id:"sv3pt5",   name:"151",                  series:"Scarlet & Violet", releaseDate:"2023/09/22"},
+  {id:"sv4",      name:"Paradox Rift",         series:"Scarlet & Violet", releaseDate:"2023/11/03"},
+  {id:"sv4pt5",   name:"Paldean Fates",        series:"Scarlet & Violet", releaseDate:"2024/01/26"},
+  {id:"sv5",      name:"Temporal Forces",      series:"Scarlet & Violet", releaseDate:"2024/03/22"},
+  {id:"sv6",      name:"Twilight Masquerade",  series:"Scarlet & Violet", releaseDate:"2024/05/24"},
+  {id:"sv6pt5",   name:"Shrouded Fable",       series:"Scarlet & Violet", releaseDate:"2024/08/02"},
+  {id:"sv7",      name:"Stellar Crown",        series:"Scarlet & Violet", releaseDate:"2024/09/13"},
+  {id:"sv8",      name:"Surging Sparks",       series:"Scarlet & Violet", releaseDate:"2024/11/08"},
+  {id:"sv8pt5",   name:"Prismatic Evolutions", series:"Scarlet & Violet", releaseDate:"2025/01/17"},
+  {id:"sv9",      name:"Journey Together",     series:"Scarlet & Violet", releaseDate:"2025/03/28"},
+  {id:"sv10",     name:"Destined Rivals",      series:"Scarlet & Violet", releaseDate:"2025/05/30"},
+  {id:"zsv10pt5", name:"Black Bolt",           series:"Scarlet & Violet", releaseDate:"2025/07/18"},
+  {id:"rsv10pt5", name:"White Flare",          series:"Scarlet & Violet", releaseDate:"2025/07/18"},
+  {id:"me1",      name:"Mega Evolution",       series:"Mega Evolution",   releaseDate:"2025/09/26"},
+  {id:"me2",      name:"Phantasmal Flames",    series:"Mega Evolution",   releaseDate:"2025/11/14"},
+  {id:"me2pt5",   name:"Ascended Heroes",      series:"Mega Evolution",   releaseDate:"2026/01/30"},
+  {id:"me3",      name:"Perfect Order",        series:"Mega Evolution",   releaseDate:"2026/03/27"},
+  {id:"me4",      name:"Chaos Rising",         series:"Mega Evolution",   releaseDate:"2026/05/22"},
+  {id:"me5",      name:"Pitch Black",          series:"Mega Evolution",   releaseDate:"2026/07/17"},
+];
+
+async function apiSets(onRetry){
+  try{
+    if (Api.on()){
+      const d = (await Api.get("/api/expansions", onRetry)).data || [];
+      if (d.length) return d;
+      throw new Error("respuesta vacía");
+    }
+    const j = await getJSON(`${CFG.TCG}/sets?pageSize=250&select=id,name,series,releaseDate`, tcgHeaders(), onRetry);
+    const d = j.data || [];
+    if (d.length) return d.sort((a,b) => (a.releaseDate||"") < (b.releaseDate||"") ? -1 : 1);
+    throw new Error("respuesta vacía");
+  }catch(e){
+    console.warn("/v2/sets no disponible, usando lista fija:", e.message);
+    return SETS_FALLBACK.slice();
+  }
+}
+
+// Equivalente cliente de  GET /api/cards/illustration-rares
+// Consulta set por set: cada respuesta cabe en una página y queda cacheada por
+// separado, así una expansión nueva sólo cuesta 1 request extra.
+const IR_Q = '(rarity:"Illustration Rare" OR rarity:"Special Illustration Rare")';
+const irUrl = setId => `${CFG.TCG}/cards?q=${encodeURIComponent(`set.id:${setId} ${IR_Q}`)}`
+                     + `&pageSize=250&orderBy=number&select=${CFG.CARD_SELECT}`;
+
+// Devuelve {cards, failed}. Un set que falle NO tumba el catálogo entero:
+// se anota y se puede reintentar sólo esa parte.
+async function apiRaresBySeries(series, onProgress, only){
+  const say = (i, tot, nm, n, extra) => onProgress && onProgress(i, tot, nm, n, extra);
+
+  // Con gateway es UNA sola petición: el backend recorre las expansiones y cachea.
+  // `only` (reintentar las que fallaron) se traduce en refresh=1.
+  if (Api.on()){
+    say(0, 1, "consultando el gateway", 0, "");
+    const q = `/api/cards/illustration-rares?series=${encodeURIComponent(series)}${only ? "&refresh=1" : ""}`;
+    const j = await Api.get(q,
+      (n, max) => say(0, 1, "consultando el gateway", 0, `sin respuesta, reintento ${n}/${max}…`));
+    const cards = j.data || [];
+    say(1, 1, "", cards.length, "");
+    return {cards, failed: j.failed || []};
+  }
+
+  const all = await apiSets((n, max, w) => say(0, 1, "", 0, `sin respuesta, reintento ${n}/${max}…`));
+  let sets = all.filter(s => s.series === series);
+  if (only && only.length) sets = sets.filter(s => only.includes(s.id));
+
+  const out = [], failed = [];
+  for (let i = 0; i < sets.length; i++){
+    say(i, sets.length, sets[i].name, out.length, "");
+    try{
+      const j = await getJSON(irUrl(sets[i].id), tcgHeaders(),
+        (n, max) => say(i, sets.length, sets[i].name, out.length, `sin respuesta, reintento ${n}/${max}…`));
+      out.push(...(j.data || []));
+    }catch(e){
+      console.warn("set omitido:", sets[i].id, e.message);
+      failed.push({id:sets[i].id, name:sets[i].name});
+    }
+  }
+  say(sets.length, sets.length, "", out.length, "");
+  return {cards: out, failed};
+}
+
+/* ------------------------------------------------------ store (colección) -- */
+const Store = {
+  data: {pokedex_tcg:{}, illustration_rares:{}},
+  load(){
+    try{
+      const raw = localStorage.getItem(CFG.STORE_KEY);
+      if (raw){
+        const p = JSON.parse(raw);
+        this.data.pokedex_tcg        = p.pokedex_tcg        || {};
+        this.data.illustration_rares = p.illustration_rares || {};
+      }
+    }catch(e){ console.warn("colección ilegible, se reinicia", e); }
+  },
+  save(){ localStorage.setItem(CFG.STORE_KEY, JSON.stringify(this.data)); },
+
+  natOwned : id => !!(Store.data.pokedex_tcg[id] && Store.data.pokedex_tcg[id].owned),
+  natEntry : id => Store.data.pokedex_tcg[id] || null,
+  natCount : () => Object.values(Store.data.pokedex_tcg).filter(e => e && e.owned).length,
+
+  setNat(id, card){
+    const prev = this.data.pokedex_tcg[id];
+    this.data.pokedex_tcg[id] = {
+      owned      : true,
+      card_id    : card.id,
+      card_name  : card.name,
+      card_image : (card.images && card.images.small) || "",
+      set_name   : (card.set && card.set.name) || "",
+      // reasignar la carta NO borra la marca: sigues buscando su alterna
+      wants_alt  : !!(prev && prev.wants_alt),
+      updated_at : today(),
+    };
+    this.save();
+  },
+
+  natAltCount: () => Object.values(Store.data.pokedex_tcg).filter(e => e && e.owned && e.wants_alt).length,
+
+  /* "La tengo, pero busco su alterna". Sólo aplica a slots con carta. */
+  toggleAlt(id){
+    const e = this.data.pokedex_tcg[id];
+    if (!e || !e.owned) return false;
+    e.wants_alt = !e.wants_alt;
+    this.save();
+    return e.wants_alt;
+  },
+  clearNat(id){ delete this.data.pokedex_tcg[id]; this.save(); },
+
+  irOwned : cid => !!(Store.data.illustration_rares[cid] && Store.data.illustration_rares[cid].owned),
+  irCount : () => Object.values(Store.data.illustration_rares).filter(e => e && e.owned).length,
+  toggleIr(cid){
+    const cur = this.data.illustration_rares[cid];
+    if (cur && cur.owned) delete this.data.illustration_rares[cid];
+    else this.data.illustration_rares[cid] = {owned:true, condition:"NM", updated_at:today()};
+    this.save();
+    return this.irOwned(cid);
+  },
+  setCondition(cid, c){
+    if (this.data.illustration_rares[cid]){ this.data.illustration_rares[cid].condition = c; this.save(); }
+  },
+};
+
+/* ---------------------------------------------------------------- estado -- */
+const S = {
+  view    : "nat",
+  species : [],
+  typeMap : null,
+  irCards : null,
+  irFailed: [],
+  nat : {q:"", f:"all", type:"", gen:""},
+  ir  : {q:"", f:"all", rarity:"", set:"", type:"", series:"Scarlet & Violet"},
+};
+
+/* ------------------------------------------------------------- indicadores -- */
+function paintGauges(){
+  const nTot = S.species.length, nOwn = Store.natCount(), nAlt = Store.natAltCount();
+  $("#gNat").innerHTML = `${nOwn} / ${nTot || "—"}  ·  ${pct(nOwn, nTot)}%`
+    + (nAlt ? `<span style="color:var(--red-500);font-size:13px"> · 🔴 ${nAlt}</span>` : "");
+  $("#gNatBar").style.width = pct(nOwn, nTot) + "%";
+
+  const iTot = S.irCards ? S.irCards.length : 0, iOwn = Store.irCount();
+  $("#gIr").textContent = S.irCards ? `${iOwn} / ${iTot}  ·  ${pct(iOwn, iTot)}%`
+                                    : `${iOwn} marcadas · catálogo sin cargar`;
+  $("#gIrBar").style.width = pct(iOwn, iTot) + "%";
+  $("#ledG").style.filter = nOwn ? "" : "brightness(.4)";
+}
+
+/* ============================================================================
+   VISTA 1 · POKÉDEX NACIONAL
+   ========================================================================== */
+function natFiltered(){
+  const {q, f, type, gen} = S.nat;
+  const term = q.trim().toLowerCase();
+  const num  = term.replace(/^#/,"").replace(/^0+/,"");
+  const g    = gen !== "" ? GENS[+gen] : null;
+  return S.species.filter(p => {
+    if (g && (p.id < g[1] || p.id > g[2])) return false;
+    const own = Store.natOwned(p.id);
+    if (f === "own"  && !own) return false;
+    if (f === "miss" &&  own) return false;
+    if (f === "alt"  && !(own && Store.natEntry(p.id).wants_alt)) return false;
+    if (type && S.typeMap && !(S.typeMap[type] && S.typeMap[type].has(p.id))) return false;
+    if (term && !(p.name.includes(term) || String(p.id) === num || pad(p.id).includes(num))) return false;
+    return true;
+  });
+}
+
+const ALT_ON  = "Buscando arte alterno u otra rareza — clic para quitar la marca";
+const ALT_OFF = "La tengo, pero busco otra versión (arte alterno / otra rareza)";
+
+function natSlot(p){
+  const e   = Store.natEntry(p.id);
+  const own = !!(e && e.owned);
+  const alt = own && !!e.wants_alt;
+  // sprite pixelado (≈10 KB) para faltantes; la carta real para obtenidas
+  const img = own && e.card_image ? e.card_image : CFG.SPRITE(p.id);
+  const tit = own
+    ? `Carta: ${esc(e.card_name)} · ${esc(e.set_name)}${alt ? " — buscando alterna" : ""}`
+    : "Sin registrar — clic para asignar carta";
+  return `<article class="slot ${own?"own":"miss"}${alt?" alt-on":""}" data-id="${p.id}" title="${tit}">
+    <span class="num">#${pad(p.id)}</span><span class="dot"></span>
+    ${own ? `<button class="altbtn" data-alt="${p.id}" aria-pressed="${alt}"
+              aria-label="${alt?ALT_ON:ALT_OFF}" title="${alt?ALT_ON:ALT_OFF}"></button>` : ""}
+    <div class="art"><img loading="lazy" src="${img}" alt="${esc(p.name)}"
+      onerror="this.onerror=null;this.src='${CFG.ART(p.id)}'"></div>
+    <div class="nm">${esc(p.name)}</div>
+  </article>`;
+}
+
+function paintNatHint(list){
+  const n = list ? list.length : natFiltered().length;
+  const alt = Store.natAltCount();
+  $("#hNat").innerHTML = `<span class="count">${n} de ${S.species.length} especies · `
+    + `${Store.natCount()} registradas`
+    + (alt ? ` · <b style="color:var(--red-500)">${alt} buscando alterna</b>` : "")
+    + `</span>`;
+}
+
+function renderNat(){
+  const list = natFiltered();
+  paintNatHint(list);
+  $("#natBody").innerHTML = list.length
+    ? `<div class="grid">${list.map(natSlot).join("")}</div>`
+    : `<div class="state">Sin resultados con esos filtros.</div>`;
+  paintGauges();
+}
+
+/* --------------------------------------------- modal: asignar carta a slot -- */
+async function openNatModal(id){
+  const p = S.species.find(x => x.id === id); if (!p) return;
+  const e = Store.natEntry(id);
+  $("#mImg").src = CFG.ART(id);
+  $("#mImg").onerror = function(){ this.onerror = null; this.src = CFG.SPRITE(id); };
+  $("#mTitle").textContent = p.name;
+  $("#mSub").textContent   = `#${pad(id)} · ${e && e.owned ? "registrado: " + e.card_id : "sin carta asignada"}`;
+  $("#mBody").innerHTML = `<div class="state"><div class="sp"></div>Buscando cartas de ${esc(p.name)} en pokemontcg.io…</div>`;
+  $("#ovl").classList.add("on");
+
+  let cards;
+  try{ cards = await apiCardsForPokemon(id); }
+  catch(err){
+    $("#mBody").innerHTML = `<div class="state err">
+      <b>No se pudo consultar la API.</b><br><small>${esc(err.message)}</small><br><br>
+      <small style="color:var(--txt-dim)">pokemontcg.io está devolviendo errores 502 por rachas. Reintenta en un momento.</small><br>
+      <button class="btn" id="mRetry">Reintentar</button></div>`;
+    const b = $("#mRetry"); if (b) b.addEventListener("click", () => openNatModal(id));
+    return;
+  }
+  if (!cards.length){
+    $("#mBody").innerHTML = `<div class="state">No hay cartas registradas para <b>${esc(p.name)}</b> en la Pokémon TCG API.</div>`;
+    return;
+  }
+  const cur = e && e.card_id;
+  $("#mBody").innerHTML =
+    `<div class="toolbar" style="margin-bottom:12px">
+       <span class="count">${cards.length} cartas disponibles · elige la que tienes físicamente</span>
+       <span class="spacer"></span>
+       ${cur ? `<button class="btn sm" id="mUnset">Quitar carta asignada</button>` : ""}
+     </div>
+     <div class="pick">${cards.map(c => `
+        <div class="p ${c.id === cur ? "sel" : ""}" data-cid="${esc(c.id)}">
+          <img loading="lazy" src="${esc((c.images||{}).small||"")}" alt="${esc(c.name)}">
+          <div class="t"><b>${esc(c.name)}</b>${esc((c.set||{}).name||"")} · Nº ${esc(c.number||"?")}<br>${esc(c.rarity||"—")}</div>
+        </div>`).join("")}</div>`;
+
+  $("#mBody").querySelectorAll(".p").forEach(el => el.addEventListener("click", () => {
+    const card = cards.find(c => c.id === el.dataset.cid);
+    Store.setNat(id, card);
+    closeModal(); renderNat();
+    toast(`#${pad(id)} ${p.name} ← ${card.id}`);
+  }));
+  const un = $("#mUnset");
+  if (un) un.addEventListener("click", () => {
+    Store.clearNat(id); closeModal(); renderNat(); toast(`#${pad(id)} liberado`);
+  });
+}
+
+/* ============================================================================
+   VISTA 2 · ILLUSTRATION RARES (SCARLET & VIOLET)
+   ========================================================================== */
+function irFiltered(){
+  const {q, f, rarity, set, type} = S.ir;
+  const term = q.trim().toLowerCase();
+  return (S.irCards || []).filter(c => {
+    const own = Store.irOwned(c.id);
+    if (f === "own"  && !own) return false;
+    if (f === "miss" &&  own) return false;
+    if (rarity && c.rarity !== rarity) return false;
+    if (set && (c.set||{}).id !== set) return false;
+    if (type && !(c.types||[]).includes(type)) return false;
+    if (term){
+      const hay = `${c.name} ${c.artist||""} ${(c.set||{}).name||""} ${c.number||""} ${c.id}`.toLowerCase();
+      if (!hay.includes(term)) return false;
+    }
+    return true;
+  });
+}
+
+function irCard(c){
+  const own  = Store.irOwned(c.id);
+  const ent  = Store.data.illustration_rares[c.id] || {};
+  const sar  = c.rarity === "Special Illustration Rare";
+  return `<article class="card ${own?"own":"miss"}" data-cid="${esc(c.id)}">
+    <div class="img" data-zoom="${esc((c.images||{}).large || (c.images||{}).small || "")}" data-nm="${esc(c.name)}">
+      <img loading="lazy" src="${esc((c.images||{}).small||"")}" alt="${esc(c.name)}">
+      <span class="rar ${sar?"sar":"ar"}">${sar?"SAR":"AR"}</span>
+    </div>
+    <div class="meta">
+      <b>${esc(c.name)}</b>
+      <small>${esc((c.set||{}).name||"")} · ${esc(c.number||"?")} ${c.artist?"· "+esc(c.artist):""}</small>
+    </div>
+    <div class="act">
+      <button class="toggle" data-act="toggle">${own ? "✓ La tengo" : "Me falta"}</button>
+      ${own ? `<select class="cond" data-act="cond">
+        ${["NM","LP","MP","HP","DMG"].map(x => `<option ${ent.condition===x?"selected":""}>${x}</option>`).join("")}
+      </select>` : ""}
+    </div>
+  </article>`;
+}
+
+function renderIr(){
+  if (!S.irCards){ paintGauges(); return; }
+  const list = irFiltered();
+  const own  = Store.irCount();
+  $("#hIr").innerHTML = `<span class="count">${list.length} mostradas · ${own} / ${S.irCards.length} obtenidas (${pct(own, S.irCards.length)}%)</span>`;
+  $("#irBody").innerHTML = irWarning(S.irFailed) + (list.length
+    ? `<div class="cards">${list.map(irCard).join("")}</div>`
+    : `<div class="state">Sin resultados con esos filtros.</div>`);
+  const r = $("#irRetry");
+  if (r) r.addEventListener("click", () => loadIr(false, S.irFailed.map(f => f.id)));
+  paintGauges();
+}
+
+function fillIrSelects(){
+  const sets = new Map(), types = new Set();
+  S.irCards.forEach(c => {
+    if (c.set && c.set.id) sets.set(c.set.id, c.set.name);
+    (c.types||[]).forEach(t => types.add(t));
+  });
+  $("#sIr").innerHTML = `<option value="">Todas las expansiones (${sets.size})</option>`
+    + Array.from(sets).map(([id,nm]) => `<option value="${esc(id)}">${esc(nm)}</option>`).join("");
+  $("#tIr").innerHTML = `<option value="">Todos los tipos</option>`
+    + Array.from(types).sort().map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+}
+
+function sortIr(list){
+  return list.sort((a,b) => {
+    const da = (a.set||{}).releaseDate || "", db = (b.set||{}).releaseDate || "";
+    if (da !== db) return da < db ? -1 : 1;
+    return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0);
+  });
+}
+
+// Aviso persistente cuando alguna expansión no se pudo traer
+function irWarning(failed){
+  if (!failed || !failed.length) return "";
+  return `<div class="warn">
+    ⚠ ${failed.length} expansión(es) no respondieron — el catálogo está incompleto:
+    <b>${failed.map(f => esc(f.name)).join(", ")}</b>
+    <button class="btn sm" id="irRetry">Reintentar sólo esas</button>
+  </div>`;
+}
+
+async function loadIr(force, only){
+  $("#loadIr").disabled = true;
+  $("#irBody").innerHTML = `<div class="state"><div class="sp"></div>
+    <span id="irProg">Consultando la Pokémon TCG API…</span>
+    <br><small id="irNote" style="color:var(--amber)"></small></div>`;
+  try{
+    if (force) await Cache.clear();
+    const prev = only ? (S.irCards || []) : [];
+    const {cards, failed} = await apiRaresBySeries(S.ir.series, (i, tot, nm, n, extra) => {
+      const el = $("#irProg"), nt = $("#irNote"); if (!el) return;
+      el.textContent = i < tot
+        ? `Expansión ${i + 1} / ${tot}${nm ? " · " + nm : ""} — ${n} cartas`
+        : `Ordenando ${n} cartas…`;
+      if (nt) nt.textContent = extra || "";
+    }, only);
+
+    const seen = new Set(cards.map(c => c.id));
+    S.irCards  = sortIr(cards.concat(prev.filter(c => !seen.has(c.id))));
+    S.irFailed = failed;
+    fillIrSelects();
+    renderIr();
+    if (failed.length) toast(`${S.irCards.length} cartas · ${failed.length} expansión(es) sin respuesta`);
+    else               toast(`${S.irCards.length} cartas AR/SAR cargadas`);
+  }catch(err){
+    $("#irBody").innerHTML = `<div class="state err">
+      <b>No se pudo cargar el catálogo.</b><br>
+      <small>${esc(err.message)}</small><br><br>
+      <small style="color:var(--txt-dim);display:block;max-width:460px;margin:0 auto;line-height:1.6">
+        pokemontcg.io suele devolver <b>502 Bad Gateway</b> por rachas. La página de error de
+        Cloudflare no lleva cabeceras CORS, así que el navegador lo reporta como
+        «Failed to fetch». La PokéAPI sigue funcionando: la Pokédex Nacional no se ve afectada.
+        Espera un par de minutos y vuelve a intentar.
+      </small><br>
+      <button class="btn" id="irRetryAll">Reintentar ahora</button></div>`;
+    const b = $("#irRetryAll"); if (b) b.addEventListener("click", () => loadIr(false));
+  }finally{ $("#loadIr").disabled = false; }
+}
+
+/* ============================================================================
+   MODAL / NAVEGACIÓN / EVENTOS
+   ========================================================================== */
+function closeModal(){ $("#ovl").classList.remove("on"); $("#mBody").innerHTML = ""; }
+$("#mClose").addEventListener("click", closeModal);
+$("#ovl").addEventListener("click", e => { if (e.target === $("#ovl")) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function switchView(v){
+  S.view = v;
+  $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.view === v));
+  $("#vNat").style.display = v === "nat" ? "" : "none";
+  $("#vIr").style.display  = v === "ir"  ? "" : "none";
+  $("#vCfg").style.display = v === "cfg" ? "" : "none";
+  if (v === "cfg"){
+    $("#cfgDump").textContent = JSON.stringify(Store.data, null, 2);
+    $("#apiBase").value = localStorage.getItem(CFG.BASE_KEY) ?? CFG.API_BASE;
+    paintApiInfo();
+  }
+}
+$$(".tab").forEach(t => t.addEventListener("click", () => switchView(t.dataset.view)));
+
+/* --- filtros nacional --- */
+let natDeb;
+$("#qNat").addEventListener("input", e => {
+  clearTimeout(natDeb); const v = e.target.value;
+  natDeb = setTimeout(() => { S.nat.q = v; renderNat(); }, 180);
+});
+$("#fNat").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.nat.f = b.dataset.f;
+  $$("#fNat button").forEach(x => x.classList.toggle("on", x === b));
+  renderNat();
+});
+$("#tNat").addEventListener("change", async e => {
+  S.nat.type = e.target.value;
+  if (S.nat.type && !S.typeMap){
+    $("#natBody").innerHTML = `<div class="state"><div class="sp"></div>Cargando índice de tipos (18 consultas, se cachea)…</div>`;
+    try{ S.typeMap = await apiTypeMap(); }
+    catch(err){ toast("No se pudo cargar el índice de tipos"); S.nat.type = ""; e.target.value = ""; }
+  }
+  renderNat();
+});
+$("#gNatSel").addEventListener("change", e => { S.nat.gen = e.target.value; renderNat(); });
+
+$("#natBody").addEventListener("click", e => {
+  // El LED rojo vive dentro del slot: se atiende antes para no abrir el modal
+  const ab = e.target.closest(".altbtn");
+  if (ab){
+    e.stopPropagation();
+    const on = Store.toggleAlt(+ab.dataset.alt);
+    if (S.nat.f === "alt"){
+      renderNat();                    // el filtro activo depende de esta marca
+    }else{
+      ab.closest(".slot").classList.toggle("alt-on", on);
+      ab.setAttribute("aria-pressed", String(on));
+      ab.title = on ? ALT_ON : ALT_OFF;
+      ab.setAttribute("aria-label", ab.title);
+      paintNatHint(); paintGauges();
+    }
+    toast(on ? "Marcada: buscando alterna" : "Marca de alterna quitada");
+    return;
+  }
+  const slot = e.target.closest(".slot"); if (!slot) return;
+  openNatModal(+slot.dataset.id);
+});
+
+/* --- filtros illustration rares --- */
+let irDeb;
+$("#qIr").addEventListener("input", e => {
+  clearTimeout(irDeb); const v = e.target.value;
+  irDeb = setTimeout(() => { S.ir.q = v; renderIr(); }, 180);
+});
+$("#fIr").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.ir.f = b.dataset.f;
+  $$("#fIr button").forEach(x => x.classList.toggle("on", x === b));
+  renderIr();
+});
+$("#rIr").addEventListener("change", e => { S.ir.rarity = e.target.value; renderIr(); });
+$("#sIr").addEventListener("change", e => { S.ir.set    = e.target.value; renderIr(); });
+$("#tIr").addEventListener("change", e => { S.ir.type   = e.target.value; renderIr(); });
+$("#serIr").addEventListener("change", e => {
+  S.ir.series = e.target.value;
+  S.ir.set = ""; S.ir.type = "";
+  loadIr(false);
+});
+$("#loadIr").addEventListener("click", () => loadIr(false));
+
+$("#irBody").addEventListener("click", e => {
+  const zoom = e.target.closest(".img");
+  if (zoom && zoom.dataset.zoom){
+    $("#mImg").removeAttribute("src");
+    $("#mTitle").textContent = zoom.dataset.nm;
+    $("#mSub").textContent   = "vista ampliada";
+    $("#mBody").innerHTML    = `<img class="zoom" src="${esc(zoom.dataset.zoom)}" alt="">`;
+    $("#ovl").classList.add("on");
+    return;
+  }
+  const btn = e.target.closest('[data-act="toggle"]'); if (!btn) return;
+  const card = e.target.closest(".card");
+  const cid  = card.dataset.cid;
+  Store.toggleIr(cid);
+  renderIr();
+});
+$("#irBody").addEventListener("change", e => {
+  const sel = e.target.closest('[data-act="cond"]'); if (!sel) return;
+  Store.setCondition(e.target.closest(".card").dataset.cid, sel.value);
+  toast("Estado actualizado");
+});
+
+/* --- datos: conexión al gateway --- */
+function paintApiInfo(){
+  const box = $("#apiInfo"); if (!box) return;
+  if (Api.on()){
+    const i = Api.info || {};
+    const warn = i.credentialsConfigured === false
+      ? ` <b style="color:var(--amber)">· faltan credenciales en el .env</b>` : "";
+    box.innerHTML = `<span class="count" style="color:var(--ok)">✓ gateway activo — proveedor
+      <b>${esc(i.provider || "?")}</b> · ${(i.cache && i.cache.keys) || 0} entradas en caché${warn}</span>`;
+  }else{
+    box.innerHTML = `<span class="count" style="color:var(--amber)">◌ modo directo — sin backend,
+      consultando pokemontcg.io desde el navegador</span>`;
+  }
+}
+$("#btnProbe").addEventListener("click", async () => {
+  const v = $("#apiBase").value.trim();
+  localStorage.setItem(CFG.BASE_KEY, v);
+  $("#apiInfo").innerHTML = `<span class="count">probando ${esc(v || "modo directo")}…</span>`;
+  await Api.detect();
+  paintApiInfo();
+  toast(Api.on() ? `Conectado a ${Api.info.provider}` : "Sin gateway · modo directo");
+  S.irCards = null; S.irFailed = [];
+  if (S.view === "ir") $("#irBody").innerHTML =
+    `<div class="state">Pulsa <b>Cargar catálogo</b> para traer las cartas con el nuevo origen.</div>`;
+});
+
+/* --- datos --- */
+$("#btnExport").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(Store.data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `pokedex-tcg-${today()}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+});
+$("#btnImport").addEventListener("click", () => $("#fileImport").click());
+$("#fileImport").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try{
+    const p = JSON.parse(await f.text());
+    Store.data.pokedex_tcg        = p.pokedex_tcg        || {};
+    Store.data.illustration_rares = p.illustration_rares || {};
+    Store.save(); renderNat(); renderIr(); switchView("cfg");
+    toast("Colección importada");
+  }catch(err){ toast("Archivo inválido"); }
+  e.target.value = "";
+});
+/* Semilla para probar la interfaz sin depender de pokemontcg.io, que cae a
+   ratos. No pone imagen de carta a propósito: el slot cae al sprite oficial en
+   vez de arriesgar una URL inventada que saldría rota. Cuando la API responda,
+   asigna cartas reales con un clic en cualquier slot. */
+const EJEMPLO = [
+  [1,"Bulbasaur",false],   [4,"Charmander",true],  [6,"Charizard",true],
+  [7,"Squirtle",false],    [25,"Pikachu",true],    [94,"Gengar",false],
+  [131,"Lapras",false],    [143,"Snorlax",true],   [150,"Mewtwo",false],
+  [196,"Espeon",false],    [249,"Lugia",true],     [448,"Lucario",false],
+  [658,"Greninja",true],   [700,"Sylveon",false],  [887,"Dragapult",false],
+  [906,"Sprigatito",false],[911,"Skeledirge",true],[1017,"Ogerpon",false],
+];
+$("#btnSeed").addEventListener("click", () => {
+  EJEMPLO.forEach(([dex, nombre, alterna]) => {
+    Store.data.pokedex_tcg[dex] = {
+      owned:true, card_id:`demo-${dex}`, card_name:nombre, card_image:"",
+      set_name:"Ejemplo", wants_alt:alterna, updated_at:today(),
+    };
+  });
+  Store.save(); renderNat();
+  $("#cfgDump").textContent = JSON.stringify(Store.data, null, 2);
+  const alt = EJEMPLO.filter(e => e[2]).length;
+  toast(`${EJEMPLO.length} de ejemplo · ${alt} con LED rojo`);
+  switchView("nat");
+});
+
+$("#btnClearCache").addEventListener("click", async () => {
+  await Cache.clear(); toast("Caché de API vaciada · recarga para refrescar");
+});
+$("#btnReset").addEventListener("click", () => {
+  if (!confirm("Esto borra TODO tu avance registrado. ¿Continuar?")) return;
+  Store.data = {pokedex_tcg:{}, illustration_rares:{}};
+  Store.save(); renderNat(); renderIr(); switchView("cfg");
+  $("#cfgDump").textContent = JSON.stringify(Store.data, null, 2);
+  toast("Colección borrada");
+});
+
+/* ============================================================================
+   ARRANQUE
+   ========================================================================== */
+(async function init(){
+  Store.load();
+  await Api.detect();          // ¿hay gateway Node escuchando?
+  // selects estáticos
+  $("#gNatSel").innerHTML = `<option value="">Todas las generaciones</option>`
+    + GENS.map((g,i) => `<option value="${i}">${g[0]}</option>`).join("");
+  $("#tNat").innerHTML = `<option value="">Todos los tipos</option>`
+    + Object.entries(TYPE_ES).map(([k,v]) => `<option value="${k}">${v}</option>`).join("");
+
+  try{
+    S.species = await apiSpecies();
+  }catch(err){
+    $("#natBody").innerHTML = `<div class="state err">No se pudo contactar PokéAPI.<br><small>${esc(err.message)}</small><br><br><button class="btn" onclick="location.reload()">Reintentar</button></div>`;
+    return;
+  }
+  renderNat();
+
+  // con gateway el catálogo es 1 petición cacheada: lo levantamos solo.
+  // en modo directo, sólo si ya estaba en la caché del navegador.
+  if (Api.on() || await Cache.get(irUrl("sv1"))) loadIr(false);
+})();
+</script>
+</body>
+</html>

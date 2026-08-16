@@ -1,9 +1,9 @@
 <div class="encabezado-seccion">
   <h2>Reporte general — Editorial</h2>
-  <a href="/reportes" class="btn-cancelar">← Reportes</a>
+  <a href="<%= base %>/reportes" class="btn-cancelar">← Reportes</a>
 </div>
 
-<form method="GET" action="/reportes/editorial" class="filtro-fechas no-print">
+<form method="GET" action="<%= base %>/reportes/editorial" class="filtro-fechas no-print">
   <div><label>Desde</label><input type="date" name="desde" value="<%= desde || '' %>"></div>
   <div><label>Hasta</label><input type="date" name="hasta" value="<%= hasta || '' %>"></div>
   <div class="filtro-libros">
@@ -19,7 +19,7 @@
   </div>
   <div class="filtro-botones">
     <button type="submit" class="btn btn-inline">Filtrar</button>
-    <a href="/reportes/editorial" class="btn-cancelar">Limpiar</a>
+    <a href="<%= base %>/reportes/editorial" class="btn-cancelar">Limpiar</a>
     <button type="button" class="btn-secundario" onclick="window.print()">Imprimir</button>
   </div>
 </form>

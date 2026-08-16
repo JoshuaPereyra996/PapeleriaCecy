@@ -17,8 +17,12 @@
     "ejs": "^6.0.1",
     "express": "^5.2.1",
     "express-ejs-layouts": "^2.5.1",
+    "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^7.4.0",
     "express-session": "^1.19.0",
+    "helmet": "^7.1.0",
     "mysql2": "^3.22.5",
+    "node-cache": "^5.1.2",
     "nodemailer": "^9.0.1"
   },
   "devDependencies": {

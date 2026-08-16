@@ -1,13 +1,13 @@
 <div class="encabezado-seccion">
   <h2>Comisiones por maestro</h2>
-  <a href="/reportes" class="btn-cancelar">← Reportes</a>
+  <a href="<%= base %>/reportes" class="btn-cancelar">← Reportes</a>
 </div>
 
-<form method="GET" action="/reportes/maestros" class="filtro-fechas no-print">
+<form method="GET" action="<%= base %>/reportes/maestros" class="filtro-fechas no-print">
   <div><label>Desde</label><input type="date" name="desde" value="<%= desde || '' %>"></div>
   <div><label>Hasta</label><input type="date" name="hasta" value="<%= hasta || '' %>"></div>
   <button type="submit" class="btn btn-inline">Filtrar</button>
-  <a href="/reportes/maestros" class="btn-cancelar">Limpiar</a>
+  <a href="<%= base %>/reportes/maestros" class="btn-cancelar">Limpiar</a>
   <button type="button" class="btn-secundario" onclick="window.print()">Imprimir</button>
 </form>
 
@@ -27,7 +27,7 @@
           <td><%= f.alumnos %></td>
           <td><%= f.libros_vendidos %></td>
           <td class="acciones no-print">
-            <a href="/reportes/maestros/<%= f.id %>?desde=<%= desde || '' %>&hasta=<%= hasta || '' %>">Ver alumnos</a>
+            <a href="<%= base %>/reportes/maestros/<%= f.id %>?desde=<%= desde || '' %>&hasta=<%= hasta || '' %>">Ver alumnos</a>
           </td>
         </tr>
       <% }) %>

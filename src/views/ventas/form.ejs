@@ -8,7 +8,7 @@
     <div class="aviso-correccion">Estás corrigiendo una venta. Quita los libros equivocados y agrega los correctos; abajo verás cuánto cobrar o devolver.</div>
   <% } %>
 
-  <form action="<%= venta && venta.id ? '/ventas/' + venta.id : '/ventas' %>" method="POST" class="formulario formulario-ancho">
+  <form action="<%= venta && venta.id ? base + '/ventas/' + venta.id : base + '/ventas' %>" method="POST" class="formulario formulario-ancho">
     <% if (venta && venta.id) { %><input type="hidden" name="total_anterior" value="<%= totalAnterior %>"><% } %>
 
     <label>Nombre del alumno</label>
@@ -82,7 +82,7 @@
 
     <div class="form-botones">
       <button type="submit" class="btn btn-inline"><%= venta && venta.id ? 'Guardar corrección' : 'Registrar venta' %></button>
-      <a href="<%= venta && venta.id ? '/ventas/' + venta.id : '/ventas' %>" class="btn-cancelar">Cancelar</a>
+      <a href="<%= venta && venta.id ? base + '/ventas/' + venta.id : base + '/ventas' %>" class="btn-cancelar">Cancelar</a>
     </div>
   </form>
 

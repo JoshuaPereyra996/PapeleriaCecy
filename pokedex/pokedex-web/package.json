@@ -1,0 +1,25 @@
+{
+  "name": "pokedex-tcg",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pokedex TCG: coleccion personal de cartas con login y persistencia en MySQL. Montable como router dentro de una app Express existente.",
+  "main": "index.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "crear-usuario": "node scripts/crear-usuario.js",
+    "migrar": "node scripts/migrar-esquema.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^7.4.0",
+    "express-session": "^1.18.0",
+    "helmet": "^7.1.0",
+    "mysql2": "^3.11.0",
+    "node-cache": "^5.1.2"
+  }
+}

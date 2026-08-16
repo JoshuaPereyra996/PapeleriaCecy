@@ -14,38 +14,63 @@ const reportesRouter = require('./src/routes/reportes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Motor de vistas EJS
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'src/views'));
-app.use(expressLayouts);
-app.set('layout', 'partials/layout');
+// Hostinger pone la app detrás de un proxy; sin esto las cookies "secure"
+// no se envían y el login de la Pokédex entra en bucle de redirecciones.
+app.set("trust proxy", 1);
 
+// Raíz → Papelería
+app.get('/', (req, res) => res.redirect('/papeleria'));
 
-// Archivos estáticos y lectura de formularios
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
+// ─── SUB-APP: PAPELERÍA (/papeleria) ────────────────────────────────────────
+const papeleriaApp = express();
 
-// Sesiones
-app.use(session({
+papeleriaApp.set('view engine', 'ejs');
+papeleriaApp.set('views', path.join(__dirname, 'src/views'));
+papeleriaApp.use(expressLayouts);
+papeleriaApp.set('layout', 'partials/layout');
+papeleriaApp.use(express.static(path.join(__dirname, 'public')));
+
+// Sesión y body parser solo para /papeleria — la Pokédex tiene su propia sesión
+papeleriaApp.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 } // 8 horas
+  cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
+papeleriaApp.use(express.urlencoded({ extended: true }));
 
-// Hace que el usuario logueado esté disponible en todas las vistas
-app.use((req, res, next) => {
+// Inyecta `base` en vistas y parcha res.redirect para que siempre incluya el
+// prefijo de montaje (/papeleria), independientemente de qué router lo llame.
+papeleriaApp.use((req, res, next) => {
+  const base = req.baseUrl; // '/papeleria' — capturado aquí antes de que Express
+                            // lo sobreescriba al delegar a routers hijos
   res.locals.usuario = req.session.usuario || null;
+  res.locals.base = base;
+
+  const _redirect = res.redirect.bind(res);
+  res.redirect = function (statusOrUrl, url) {
+    if (url === undefined) {
+      url = statusOrUrl;
+      if (typeof url === 'string' && url.startsWith('/') && !url.startsWith(base)) {
+        url = base + url;
+      }
+      return _redirect.call(res, url);
+    }
+    if (typeof url === 'string' && url.startsWith('/') && !url.startsWith(base)) {
+      url = base + url;
+    }
+    return _redirect.call(res, statusOrUrl, url);
+  };
   next();
 });
 
-// --- Autenticación ---
-app.get('/login', (req, res) => {
+// Autenticación
+papeleriaApp.get('/login', (req, res) => {
   if (req.session.usuario) return res.redirect('/');
   res.render('login', { titulo: 'Iniciar sesión', error: null });
 });
 
-app.post('/login', async (req, res) => {
+papeleriaApp.post('/login', async (req, res) => {
   const { usuario, password } = req.body;
   try {
     const [filas] = await db.query(
@@ -68,21 +93,30 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/logout', (req, res) => {
+papeleriaApp.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
-// Tablero principal
-app.get('/', requireLogin, (req, res) => {
+papeleriaApp.get('/', requireLogin, (req, res) => {
   res.render('index', { titulo: 'Inicio' });
 });
 
-// Rutas de catálogos (protegidas con login)
-app.use('/libros', requireLogin, librosRouter);
-app.use('/maestros', requireLogin, maestrosRouter);
-app.use('/ventas', requireLogin, ventasRouter);
-app.use('/reportes', requireLogin, reportesRouter);
+papeleriaApp.use('/libros', requireLogin, librosRouter);
+papeleriaApp.use('/maestros', requireLogin, maestrosRouter);
+papeleriaApp.use('/ventas', requireLogin, ventasRouter);
+papeleriaApp.use('/reportes', requireLogin, reportesRouter);
+
+app.use('/papeleria', papeleriaApp);
+
+// ─── SUB-APP: POKÉDEX (/pokedex) ────────────────────────────────────────────
+// La Pokédex exporta un factory que devuelve un Express Router, con su propia
+// sesión (cookie "pokedex.sid"), helmet y base de datos. No interfiere con la
+// sesión de la Papelería.
+const crearPokedex = require('./pokedex/pokedex-web/src/pokedex');
+app.use('/pokedex', crearPokedex({ basePath: '/pokedex' }));
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`  Papelería → http://localhost:${PORT}/papeleria`);
+  console.log(`  Pokédex   → http://localhost:${PORT}/pokedex`);
 });

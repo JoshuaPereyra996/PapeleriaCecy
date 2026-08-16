@@ -1,6 +1,6 @@
 <div class="encabezado-seccion">
   <h2>Detalle de venta</h2>
-  <a href="/ventas" class="btn-cancelar">← Volver</a>
+  <a href="<%= base %>/ventas" class="btn-cancelar">← Volver</a>
 </div>
 
 <div class="ficha">
@@ -25,8 +25,8 @@
 </table>
 
 <div class="form-botones" style="margin-top:1.5rem;">
-  <a href="/ventas/<%= venta.id %>/editar" class="btn btn-inline">Corrección / Reembolso</a>
-  <form action="/ventas/<%= venta.id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar esta venta completa?');">
+  <a href="<%= base %>/ventas/<%= venta.id %>/editar" class="btn btn-inline">Corrección / Reembolso</a>
+  <form action="<%= base %>/ventas/<%= venta.id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar esta venta completa?');">
     <button type="submit" class="link-rojo">Eliminar venta</button>
   </form>
 </div>

@@ -2,12 +2,12 @@
 
 <% if (error) { %><div class="error"><%= error %></div><% } %>
 
-<form action="<%= maestro && maestro.id ? '/maestros/' + maestro.id : '/maestros' %>" method="POST" class="formulario">
+<form action="<%= maestro && maestro.id ? base + '/maestros/' + maestro.id : base + '/maestros' %>" method="POST" class="formulario">
   <label>Nombre completo</label>
   <input type="text" name="nombre_completo" value="<%= maestro ? maestro.nombre_completo : '' %>" required autofocus>
 
   <div class="form-botones">
     <button type="submit" class="btn btn-inline">Guardar</button>
-    <a href="/maestros" class="btn-cancelar">Cancelar</a>
+    <a href="<%= base %>/maestros" class="btn-cancelar">Cancelar</a>
   </div>
 </form>

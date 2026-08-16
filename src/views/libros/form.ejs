@@ -1,6 +1,6 @@
 <h2><%= libro ? 'Editar libro' : 'Nuevo libro' %></h2>
 <% if (error) { %><div class="error"><%= error %></div><% } %>
-<form action="<%= libro && libro.id ? '/libros/' + libro.id : '/libros' %>" method="POST" class="formulario">
+<form action="<%= libro && libro.id ? base + '/libros/' + libro.id : base + '/libros' %>" method="POST" class="formulario">
   <label>Título</label>
   <input type="text" name="titulo" value="<%= libro ? libro.titulo : '' %>" required>
 
@@ -29,6 +29,6 @@
 
   <div class="form-botones">
     <button type="submit" class="btn btn-inline">Guardar</button>
-    <a href="/libros" class="btn-cancelar">Cancelar</a>
+    <a href="<%= base %>/libros" class="btn-cancelar">Cancelar</a>
   </div>
 </form>

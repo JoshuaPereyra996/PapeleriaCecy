@@ -1,11 +1,11 @@
 <div class="encabezado-seccion">
   <h2>Ventas registradas</h2>
-  <a href="/ventas/nueva" class="btn btn-inline">+ Registrar venta</a>
+  <a href="<%= base %>/ventas/nueva" class="btn btn-inline">+ Registrar venta</a>
 </div>
-<form method="GET" action="/ventas" class="barra-busqueda">
+<form method="GET" action="<%= base %>/ventas" class="barra-busqueda">
   <input type="text" name="q" value="<%= q || '' %>" placeholder="Buscar por nombre del alumno…" autofocus>
   <button type="submit" class="btn btn-inline">Buscar</button>
-  <% if (q) { %><a href="/ventas" class="btn-cancelar">Limpiar</a><% } %>
+  <% if (q) { %><a href="<%= base %>/ventas" class="btn-cancelar">Limpiar</a><% } %>
 </form>
 <% if (q) { %><p class="nota-info">Mostrando resultados para "<%= q %>".</p><% } %>
 <% if (ventas.length === 0) { %>
@@ -25,7 +25,7 @@
           <td><%= v.especialidad %></td>
           <td><%= v.num_libros %></td>
           <td>$<%= v.total %></td>
-          <td class="acciones"><a href="/ventas/<%= v.id %>">Detalles</a></td>
+          <td class="acciones"><a href="<%= base %>/ventas/<%= v.id %>">Detalles</a></td>
         </tr>
       <% }) %>
     </tbody>
