@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
+
+// El logo del ticket es opcional: si el archivo no está, el ticket sale solo
+// con el nombre del negocio en texto.
+const LOGO_TICKET = fs.existsSync(path.join(__dirname, '../../public/Image_Logo/logo-ticket.jpg'))
+  ? '/Image_Logo/logo-ticket.jpg'
+  : '';
 
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
@@ -19,7 +27,7 @@ async function obtenerVentaDetalle(id) {
   const [vfilas] = await db.query('SELECT * FROM ventas WHERE id = ?', [id]);
   if (vfilas.length === 0) return { venta: null, items: [] };
   const [items] = await db.query(`
-    SELECT vi.precio, l.titulo AS libro, m.nombre_completo AS maestro
+    SELECT vi.precio, l.titulo AS libro, l.autor, m.nombre_completo AS maestro
     FROM venta_items vi
     JOIN libros l   ON l.id = vi.libro_id
     JOIN maestros m ON m.id = vi.maestro_id
@@ -84,11 +92,25 @@ router.get('/:id/editar', async (req, res) => {
   res.render('ventas/form', { titulo: 'Corrección de venta', ...datos, venta: vfilas[0], items, totalAnterior: Number(vfilas[0].total), error: null });
 });
 
+// Ticket para impresora térmica de 58mm (2.2"). Se renderiza sin el layout del
+// sitio. El monto pagado y el cambio se calculan en el navegador y no se
+// guardan: la tabla ventas no tiene columnas de pago.
+router.get('/:id/ticket', async (req, res) => {
+  const { venta, items } = await obtenerVentaDetalle(req.params.id);
+  if (!venta) return res.redirect('/ventas');
+  res.render('ventas/ticket', {
+    layout: false,
+    venta, items,
+    negocio:   process.env.NEGOCIO_NOMBRE    || 'Papelería Cecy',
+    logo: LOGO_TICKET
+  });
+});
+
 router.get('/:id', async (req, res) => {
   const { venta, items } = await obtenerVentaDetalle(req.params.id);
   if (!venta) return res.redirect('/ventas');
   const nota = construirNota(venta, items);
-  res.render('ventas/detalle', { titulo: 'Detalle de venta', venta, items, nota, correo: req.query.correo || null });
+  res.render('ventas/detalle', { titulo: 'Detalle de venta', venta, items, nota, correo: req.query.correo || null, nueva: req.query.nueva === '1' });
 });
 
 router.post('/:id', async (req, res) => { await guardarVenta(req, res, req.params.id); });
@@ -164,7 +186,7 @@ async function guardarVenta(req, res, ventaId) {
       catch (e) { console.error('No se pudo enviar el ticket:', e); }
     }
 
-    res.redirect(esCorreccion ? '/ventas/' + ventaId : '/ventas');
+    res.redirect('/ventas/' + idFinal + (esCorreccion ? '' : '?nueva=1'));
   } catch (error) {
     console.error(error);
     const datos = await datosFormulario();

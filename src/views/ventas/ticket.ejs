@@ -1,0 +1,256 @@
+<%
+  // Vista independiente: se renderiza con layout:false porque el ticket no debe
+  // llevar la navegación del sitio. Ancho pensado para rollo de 58mm (2.2").
+  const folio    = String(venta.id).padStart(5, '0');
+  const f        = new Date(venta.fecha);
+  const fechaTxt = f.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+                   '  ' + f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const total    = Number(venta.total);
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket <%= folio %></title>
+<style>
+  /* ── Papel: rollo de 58mm; el área imprimible real ronda los 48mm ───────── */
+  @page { size: 58mm auto; margin: 0; }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    padding: 1.5rem 1rem 3rem;
+    background: #e9edf2;
+    color: #000;
+    font-family: Consolas, "Courier New", monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  /* ── El ticket ─────────────────────────────────────────────────────────── */
+  .ticket {
+    width: 48mm;
+    padding: 3mm 2mm;
+    background: #fff;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+  /* En pantalla se amplía al doble para poder leerlo; al imprimir vuelve a 1:1 */
+  @media screen {
+    .ticket { zoom: 2; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  }
+
+  .centro    { text-align: center; }
+  .negocio   { font-weight: bold; font-size: 12px; letter-spacing: .5px; }
+
+  /* Logo: las térmicas de 58mm rinden mal los medios tonos, así que se manda
+     en escala de grises y con el contraste subido. */
+  .logo {
+    display: block; margin: 0 auto 1.5mm; max-width: 34mm; height: auto;
+    filter: grayscale(1) contrast(1.35);
+  }
+  .sep       { border-top: 1px dashed #000; margin: 1.5mm 0; }
+  .sep-doble { border-top: 2px solid #000; margin: 1.5mm 0; }
+
+  /* Renglón título-izquierda / importe-derecha. El título envuelve solo si es
+     largo; el importe nunca se parte ni se encoge. */
+  .linea { display: flex; justify-content: space-between; gap: 2mm; }
+  .linea .num { white-space: nowrap; flex: 0 0 auto; }
+  .linea.fuerte { font-weight: bold; font-size: 11px; }
+
+  .datos p { margin: 0; word-break: break-word; }
+  /* Autor/editorial: colgado bajo el título del libro, un punto más chico. */
+  .autor { padding-left: 2mm; font-size: 8.5px; }
+  .pie { margin-top: 2mm; }
+  /* Espacio en blanco al pie para poder poner el sello de la papelería. */
+  .espacio-sello { height: 16mm; }
+
+  /* ── Controles (no se imprimen) ────────────────────────────────────────── */
+  .panel {
+    width: min(420px, 100%);
+    background: #fff;
+    border-radius: 10px;
+    padding: 1rem 1.25rem 1.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    font-family: system-ui, "Segoe UI", sans-serif;
+  }
+  .panel h1 { margin: 0 0 .75rem; font-size: 1rem; }
+  .panel label { display: block; font-size: .85rem; margin-bottom: .25rem; font-weight: 600; }
+  .panel input[type=number] {
+    width: 100%; padding: .6rem .7rem; font-size: 1.35rem; text-align: right;
+    border: 1px solid #bcc4cf; border-radius: 6px;
+  }
+  .rapidos { display: flex; flex-wrap: wrap; gap: .4rem; margin: .6rem 0 .25rem; }
+  .rapidos button {
+    flex: 1 1 auto; padding: .45rem .3rem; font-size: .85rem; cursor: pointer;
+    background: #f1f4f8; border: 1px solid #bcc4cf; border-radius: 6px;
+  }
+  .rapidos button:hover { background: #e2e8f0; }
+  .resumen { display: flex; justify-content: space-between; font-size: .9rem; margin-top: .5rem; }
+  .resumen strong { font-size: 1.1rem; }
+  .aviso { color: #b40000; font-size: .85rem; margin-top: .5rem; font-weight: 600; }
+  .acciones { display: flex; gap: .5rem; margin-top: 1rem; }
+  .acciones a, .acciones button {
+    flex: 1; text-align: center; padding: .7rem .5rem; border-radius: 6px;
+    font-size: .95rem; cursor: pointer; text-decoration: none; border: 1px solid #bcc4cf;
+    color: #1c2333; background: #fff;
+  }
+  .btn-imprimir { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
+  .nota-ayuda { font-size: .78rem; color: #55607a; margin: .75rem 0 0; line-height: 1.4; }
+
+  @media print {
+    body { background: #fff; padding: 0; display: block; }
+    .no-print { display: none !important; }
+    .ticket { box-shadow: none; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── Controles en pantalla ──────────────────────────────────────────── -->
+<div class="panel no-print">
+  <h1>Ticket de la venta <%= folio %></h1>
+
+  <label for="pagaCon">¿Con cuánto paga? (opcional)</label>
+  <input type="number" id="pagaCon" inputmode="decimal" step="0.50" min="0"
+         placeholder="0.00" autocomplete="off" autofocus>
+
+  <div class="rapidos" id="rapidos">
+    <button type="button" data-monto="exacto">Exacto</button>
+    <button type="button" data-monto="50">$50</button>
+    <button type="button" data-monto="100">$100</button>
+    <button type="button" data-monto="200">$200</button>
+    <button type="button" data-monto="500">$500</button>
+  </div>
+
+  <div class="resumen"><span>Total de la venta</span><strong>$<%= total.toFixed(2) %></strong></div>
+  <div class="resumen" id="resCambio" hidden><span>Cambio a entregar</span><strong id="resCambioTxt">$0.00</strong></div>
+  <p class="aviso" id="aviso" hidden></p>
+
+  <div class="acciones">
+    <button type="button" class="btn-imprimir" id="btnImprimir">Imprimir ticket</button>
+    <a href="<%= base %>/ventas/<%= venta.id %>">Volver a la venta</a>
+  </div>
+
+  <p class="nota-ayuda">
+    En el diálogo de impresión elige <strong>Bluetooth B23s</strong> y deja los
+    márgenes en «Ninguno». Si dejas vacío el monto pagado, el ticket se imprime
+    sin las líneas de pago y cambio.
+  </p>
+</div>
+
+<!-- ─── El ticket que se imprime ───────────────────────────────────────── -->
+<div class="ticket" id="ticket" data-total="<%= total.toFixed(2) %>">
+
+  <% if (locals.logo) { %><img class="logo" src="<%= base %><%= logo %>" alt=""><% } %>
+
+  <div class="centro negocio"><%= negocio %></div>
+
+  <div class="sep-doble"></div>
+
+  <div class="datos">
+    <p>FOLIO: <%= folio %></p>
+    <p><%= fechaTxt %></p>
+    <p>Alumno: <%= venta.alumno_nombre %></p>
+    <p>Grado/Grupo: <%= venta.grado %>° <%= venta.grupo %></p>
+  </div>
+
+  <div class="sep"></div>
+
+  <% items.forEach(it => { %>
+    <div class="linea">
+      <span><%= it.libro %></span>
+      <span class="num"><%= Number(it.precio).toFixed(2) %></span>
+    </div>
+    <% if (it.autor) { %><div class="autor"><%= it.autor %></div><% } %>
+  <% }) %>
+
+  <div class="sep"></div>
+
+  <div class="linea fuerte">
+    <span>TOTAL</span>
+    <span class="num">$<%= total.toFixed(2) %></span>
+  </div>
+
+  <div class="linea" id="filaPago" hidden>
+    <span>PAGA CON</span>
+    <span class="num">$<span id="pagoTxt">0.00</span></span>
+  </div>
+  <div class="linea fuerte" id="filaCambio" hidden>
+    <span>SU CAMBIO</span>
+    <span class="num">$<span id="cambioTxt">0.00</span></span>
+  </div>
+
+  <% if (venta.notas) { %>
+    <div class="sep"></div>
+    <div class="datos"><p>Notas: <%= venta.notas %></p></div>
+  <% } %>
+
+  <div class="sep-doble"></div>
+  <div class="centro pie">¡Gracias por su compra!</div>
+  <div class="espacio-sello"></div>
+</div>
+
+<script>
+  (function () {
+    var TOTAL      = Number(document.getElementById('ticket').dataset.total);
+    var input      = document.getElementById('pagaCon');
+    var filaPago   = document.getElementById('filaPago');
+    var filaCambio = document.getElementById('filaCambio');
+    var resCambio  = document.getElementById('resCambio');
+    var aviso      = document.getElementById('aviso');
+
+    function money(n) { return n.toFixed(2); }
+
+    function actualizar() {
+      var v = parseFloat(input.value);
+
+      // Sin monto: ticket limpio, sin líneas de pago ni cambio.
+      if (!input.value || isNaN(v) || v <= 0) {
+        filaPago.hidden = filaCambio.hidden = resCambio.hidden = aviso.hidden = true;
+        return;
+      }
+
+      filaPago.hidden = false;
+      document.getElementById('pagoTxt').textContent = money(v);
+
+      // Paga de menos: se avisa en pantalla y no se imprime cambio.
+      if (v < TOTAL) {
+        filaCambio.hidden = resCambio.hidden = true;
+        aviso.hidden = false;
+        aviso.textContent = 'Faltan $' + money(TOTAL - v) + ' para cubrir el total.';
+        return;
+      }
+
+      aviso.hidden = true;
+      var cambio = v - TOTAL;
+      filaCambio.hidden = resCambio.hidden = false;
+      document.getElementById('cambioTxt').textContent = money(cambio);
+      document.getElementById('resCambioTxt').textContent = '$' + money(cambio);
+    }
+
+    input.addEventListener('input', actualizar);
+
+    document.getElementById('rapidos').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-monto]');
+      if (!btn) return;
+      input.value = (btn.dataset.monto === 'exacto') ? money(TOTAL) : btn.dataset.monto;
+      actualizar();
+      input.focus();
+    });
+
+    document.getElementById('btnImprimir').addEventListener('click', function () {
+      window.print();
+    });
+
+    actualizar();
+  })();
+</script>
+
+</body>
+</html>

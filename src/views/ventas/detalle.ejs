@@ -3,6 +3,18 @@
   <a href="<%= base %>/ventas" class="btn-cancelar">← Volver</a>
 </div>
 
+<% if (locals.nueva) { %>
+  <div class="aviso-exito">
+    <strong>Venta registrada.</strong> ¿Le entregas ticket impreso al alumno?
+  </div>
+<% } %>
+
+<% if (locals.correo === 'ok') { %>
+  <div class="aviso-exito">La nota se envió por correo correctamente.</div>
+<% } else if (locals.correo === 'error') { %>
+  <div class="error">No se pudo enviar la nota por correo.</div>
+<% } %>
+
 <div class="ficha">
   <p><strong>Alumno:</strong> <%= venta.alumno_nombre %></p>
   <p><strong>Grado/Grupo:</strong> <%= venta.grado %>° <%= venta.grupo %></p>
@@ -25,7 +37,8 @@
 </table>
 
 <div class="form-botones" style="margin-top:1.5rem;">
-  <a href="<%= base %>/ventas/<%= venta.id %>/editar" class="btn btn-inline">Corrección / Reembolso</a>
+  <a href="<%= base %>/ventas/<%= venta.id %>/ticket" class="btn btn-inline">🧾 Imprimir ticket</a>
+  <a href="<%= base %>/ventas/<%= venta.id %>/editar" class="btn-cancelar">Corrección / Reembolso</a>
   <form action="<%= base %>/ventas/<%= venta.id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar esta venta completa?');">
     <button type="submit" class="link-rojo">Eliminar venta</button>
   </form>
