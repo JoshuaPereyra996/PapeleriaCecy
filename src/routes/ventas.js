@@ -7,8 +7,8 @@ const path = require('path');
 
 // El logo del ticket es opcional: si el archivo no está, el ticket sale solo
 // con el nombre del negocio en texto.
-const LOGO_TICKET = fs.existsSync(path.join(__dirname, '../../public/Image_Logo/logo-ticket.jpg'))
-  ? '/Image_Logo/logo-ticket.jpg'
+const LOGO_TICKET = fs.existsSync(path.join(__dirname, '../../public/Image_Logo/logo-blanco.png'))
+  ? '/Image_Logo/logo-blanco.png'
   : '';
 
 const transporter = nodemailer.createTransport({

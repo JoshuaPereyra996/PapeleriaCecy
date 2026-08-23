@@ -5,7 +5,7 @@
 
 <% if (locals.nueva) { %>
   <div class="aviso-exito">
-    <strong>Venta registrada.</strong> ¿Le entregas ticket impreso al alumno?
+    <strong>Venta registrada.</strong> ¿Le generas el ticket al alumno?
   </div>
 <% } %>
 
@@ -37,7 +37,7 @@
 </table>
 
 <div class="form-botones" style="margin-top:1.5rem;">
-  <a href="<%= base %>/ventas/<%= venta.id %>/ticket" class="btn btn-inline">🧾 Imprimir ticket</a>
+  <a href="<%= base %>/ventas/<%= venta.id %>/ticket" class="btn btn-inline">🧾 Ticket del alumno</a>
   <a href="<%= base %>/ventas/<%= venta.id %>/editar" class="btn-cancelar">Corrección / Reembolso</a>
   <form action="<%= base %>/ventas/<%= venta.id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar esta venta completa?');">
     <button type="submit" class="link-rojo">Eliminar venta</button>
