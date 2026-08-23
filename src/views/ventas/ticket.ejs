@@ -1,11 +1,17 @@
 <%
-  // Vista independiente (layout:false). El ticket NO se imprime desde el
-  // navegador: la impresora B23 no expone driver de escritorio, así que se
-  // genera como imagen PNG y se manda a la app AiYin con Web Share.
+  // Vista independiente (layout:false).
+  //
+  // IMPORTANTE — por qué el ticket es HTML y no un <canvas>:
+  // la app AiYin imprime capturando la pantalla ("página actual" / "página
+  // llena"). Esa captura reconstruye el DOM y NO conserva lo pintado dentro de
+  // un canvas: deja un rectángulo en blanco. Por eso el ticket visible tiene
+  // que ser HTML de verdad. El canvas sigue existiendo pero oculto, solo para
+  // generar el PNG de "Descargar" / "Compartir".
   const folio    = String(venta.id).padStart(5, '0');
   const f        = new Date(venta.fecha);
   const fechaTxt = f.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
                    '  ' + f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const total    = Number(venta.total);
 
   const datosTicket = {
     negocio: negocio,
@@ -15,12 +21,8 @@
     alumno:  venta.alumno_nombre,
     grupo:   venta.grado + '° ' + venta.grupo,
     notas:   venta.notas || '',
-    total:   Number(venta.total),
-    items:   items.map(it => ({
-      titulo: it.libro,
-      autor:  it.autor || '',
-      precio: Number(it.precio)
-    }))
+    total:   total,
+    items:   items.map(it => ({ titulo: it.libro, autor: it.autor || '', precio: Number(it.precio) }))
   };
 %>
 <!DOCTYPE html>
@@ -35,22 +37,56 @@
 
   body {
     margin: 0;
-    padding: 1.25rem 1rem 3rem;
+    padding: 1rem .75rem 3rem;
     background: #e9edf2;
     color: #1c2333;
     font-family: system-ui, "Segoe UI", sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
+  /* ── La hoja del ticket ─────────────────────────────────────────────────
+     Mide 384 px, los mismos puntos que imprime el papel de 58 mm a 203 dpi,
+     así lo que se ve en pantalla es idéntico a lo que sale impreso.       */
+  .hoja {
+    width: 384px;
+    max-width: 100%;
+    background: #fff;
+    color: #000;
+    padding: 18px 16px 0;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.15;
+  }
+
+  .hoja .logo { display: block; width: 200px; max-width: 100%; height: auto; margin: 0 auto 10px; }
+  .hoja .negocio { text-align: center; font-size: 26px; font-weight: bold; margin-bottom: 12px; }
+
+  .sep-doble { border-top: 3px solid #000; margin: 0 0 10px; }
+  .sep { border-top: 1px dashed #000; margin: 10px 0; }
+
+  .datos p { margin: 0 0 2px; font-size: 19px; word-break: break-word; }
+
+  .linea { display: flex; justify-content: space-between; gap: 10px; font-size: 20px; margin-top: 2px; }
+  .linea .num { white-space: nowrap; flex: 0 0 auto; }
+  .autor { font-size: 17px; padding-left: 10px; margin-bottom: 6px; }
+  .linea.fuerte { font-weight: bold; font-size: 24px; margin-top: 6px; }
+  .linea.media { font-size: 20px; }
+  .linea.cambio { font-weight: bold; font-size: 23px; }
+
+  .gracias { text-align: center; font-size: 20px; margin-top: 14px; }
+  /* Espacio en blanco para el sello: 16 mm ≈ 128 px a 203 dpi */
+  .espacio-sello { height: 128px; }
+
+  /* ── Controles (no forman parte del ticket) ─────────────────────────── */
   .panel {
     width: min(420px, 100%);
     background: #fff;
     border-radius: 10px;
     padding: 1rem 1.25rem 1.25rem;
     box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    order: -1;
   }
   .panel h1 { margin: 0 0 .75rem; font-size: 1rem; }
   .panel label { display: block; font-size: .85rem; margin-bottom: .25rem; font-weight: 600; }
@@ -63,7 +99,6 @@
     flex: 1 1 auto; padding: .45rem .3rem; font-size: .85rem; cursor: pointer;
     background: #f1f4f8; border: 1px solid #bcc4cf; border-radius: 6px;
   }
-  .rapidos button:hover { background: #e2e8f0; }
   .resumen { display: flex; justify-content: space-between; font-size: .9rem; margin-top: .5rem; }
   .resumen strong { font-size: 1.1rem; }
   .aviso { color: #b40000; font-size: .85rem; margin-top: .5rem; font-weight: 600; }
@@ -74,16 +109,29 @@
     border-radius: 6px; font-size: .95rem; cursor: pointer; text-decoration: none;
     border: 1px solid #bcc4cf; background: #fff; color: #1c2333;
   }
-  .btn-compartir { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; font-size: 1.05rem; }
+  .btn-captura { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; font-size: 1.05rem; }
   .nota-ayuda { font-size: .78rem; color: #55607a; margin: .85rem 0 0; line-height: 1.45; }
 
-  /* Vista previa: el lienzo mide 384 px reales (58 mm a 203 dpi) y se muestra
-     reducido; image-rendering evita que el navegador lo suavice de más. */
-  .previa { background: #fff; padding: .75rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
-  .previa canvas { display: block; width: 288px; max-width: 100%; height: auto; image-rendering: -webkit-optimize-contrast; }
+  /* ── Modo captura ───────────────────────────────────────────────────────
+     Deja en la página únicamente la hoja del ticket sobre fondo blanco, para
+     que "página actual" / "página llena" de AiYin capturen solo eso.      */
+  body.capturando { padding: 0; background: #fff; gap: 0; }
+  body.capturando .panel { display: none; }
+  body.capturando .hoja { box-shadow: none; }
+
+  .salir-captura {
+    position: fixed; top: 8px; right: 8px; z-index: 10;
+    padding: .5rem .9rem; font-size: .85rem; border-radius: 6px;
+    border: 1px solid #bcc4cf; background: #fff; cursor: pointer;
+  }
+  body:not(.capturando) .salir-captura { display: none; }
+
+  canvas { display: none; }
 </style>
 </head>
 <body>
+
+<button type="button" class="salir-captura" id="btnSalirCaptura">Salir del modo captura</button>
 
 <div class="panel">
   <h1>Ticket de la venta <%= folio %></h1>
@@ -100,25 +148,75 @@
     <button type="button" data-monto="500">$500</button>
   </div>
 
-  <div class="resumen"><span>Total de la venta</span><strong>$<%= Number(venta.total).toFixed(2) %></strong></div>
+  <div class="resumen"><span>Total de la venta</span><strong>$<%= total.toFixed(2) %></strong></div>
   <div class="resumen" id="resCambio" hidden><span>Cambio a entregar</span><strong id="resCambioTxt">$0.00</strong></div>
   <p class="aviso" id="aviso" hidden></p>
 
   <div class="acciones">
-    <button type="button" class="btn-compartir" id="btnCompartir">Compartir ticket a AiYin</button>
+    <button type="button" class="btn-captura" id="btnCaptura">Preparar para AiYin (captura)</button>
     <button type="button" id="btnDescargar">Descargar imagen PNG</button>
+    <button type="button" id="btnCompartir">Compartir imagen</button>
     <a href="<%= base %>/ventas/<%= venta.id %>">Volver a la venta</a>
   </div>
 
   <p class="nota-ayuda" id="ayuda">
-    Pulsa <strong>Compartir</strong> y elige <strong>AiYin</strong> en el menú;
-    la app abre la imagen y desde ahí se manda a la impresora B23.
+    <strong>Para imprimir:</strong> pulsa <em>Preparar para AiYin</em>, luego abre
+    AiYin y usa su función de capturar pantalla. Si prefieres el otro camino,
+    <em>Descargar imagen PNG</em> y ábrela desde la galería dentro de AiYin.
   </p>
 </div>
 
-<div class="previa">
-  <canvas id="lienzo" width="384" height="100"></canvas>
+<!-- ─── El ticket: HTML real, para que la captura de AiYin lo tome ─────── -->
+<div class="hoja" id="hoja">
+  <% if (locals.logo) { %><img class="logo" src="<%= base %><%= logo %>" alt=""><% } %>
+  <div class="negocio"><%= negocio %></div>
+
+  <div class="sep-doble"></div>
+
+  <div class="datos">
+    <p>FOLIO: <%= folio %></p>
+    <p><%= fechaTxt %></p>
+    <p>Alumno: <%= venta.alumno_nombre %></p>
+    <p>Grado/Grupo: <%= venta.grado %>° <%= venta.grupo %></p>
+  </div>
+
+  <div class="sep"></div>
+
+  <% items.forEach(it => { %>
+    <div class="linea">
+      <span><%= it.libro %></span>
+      <span class="num"><%= Number(it.precio).toFixed(2) %></span>
+    </div>
+    <% if (it.autor) { %><div class="autor"><%= it.autor %></div><% } %>
+  <% }) %>
+
+  <div class="sep"></div>
+
+  <div class="linea fuerte">
+    <span>TOTAL</span>
+    <span class="num">$<%= total.toFixed(2) %></span>
+  </div>
+  <div class="linea media" id="filaPago" hidden>
+    <span>PAGA CON</span>
+    <span class="num">$<span id="pagoTxt">0.00</span></span>
+  </div>
+  <div class="linea cambio" id="filaCambio" hidden>
+    <span>SU CAMBIO</span>
+    <span class="num">$<span id="cambioTxt">0.00</span></span>
+  </div>
+
+  <% if (venta.notas) { %>
+    <div class="sep"></div>
+    <div class="datos"><p>Notas: <%= venta.notas %></p></div>
+  <% } %>
+
+  <div class="sep" style="border-top-style:solid;border-top-width:3px;"></div>
+  <div class="gracias">¡Gracias por su compra!</div>
+  <div class="espacio-sello"></div>
 </div>
+
+<!-- Oculto: solo se usa para generar el PNG de descarga/compartir -->
+<canvas id="lienzo" width="384" height="100"></canvas>
 
 <script>
 (function () {
@@ -126,20 +224,48 @@
 
   var TICKET = <%- JSON.stringify(datosTicket).replace(/</g, '\\u003c') %>;
 
-  // 384 px = 58 mm a 203 dpi, la resolución nativa de estas térmicas. Dibujar
-  // a este ancho exacto evita que la impresora reescale y emborrone el texto.
   var W = 384, PAD = 16, CW = W - PAD * 2;
   var SANS = 'Arial, Helvetica, sans-serif';
 
   var lienzo = document.getElementById('lienzo');
   var ctx    = lienzo.getContext('2d');
   var input  = document.getElementById('pagaCon');
-  var logoImg = null;
-  var blobActual = null;
+  var logoImg = null, blobActual = null;
 
   function money(n) { return n.toFixed(2); }
+  function pagoActual() {
+    var v = parseFloat(input.value);
+    return (!input.value || isNaN(v) || v <= 0) ? null : v;
+  }
 
-  // Parte un texto en las líneas que quepan en maxW.
+  // ── Ticket HTML: mostrar u ocultar las líneas de pago y cambio ─────────
+  function actualizarHTML() {
+    var pago = pagoActual();
+    var filaPago = document.getElementById('filaPago');
+    var filaCambio = document.getElementById('filaCambio');
+    var resCambio = document.getElementById('resCambio');
+    var aviso = document.getElementById('aviso');
+
+    if (pago === null) {
+      filaPago.hidden = filaCambio.hidden = resCambio.hidden = aviso.hidden = true;
+      return;
+    }
+    filaPago.hidden = false;
+    document.getElementById('pagoTxt').textContent = money(pago);
+
+    if (pago < TICKET.total) {
+      filaCambio.hidden = resCambio.hidden = true;
+      aviso.hidden = false;
+      aviso.textContent = 'Faltan $' + money(TICKET.total - pago) + ' para cubrir el total.';
+      return;
+    }
+    aviso.hidden = true;
+    filaCambio.hidden = resCambio.hidden = false;
+    document.getElementById('cambioTxt').textContent = money(pago - TICKET.total);
+    document.getElementById('resCambioTxt').textContent = '$' + money(pago - TICKET.total);
+  }
+
+  // ── Canvas: mismo ticket, para el PNG descargable ──────────────────────
   function envolver(texto, maxW) {
     var palabras = String(texto).split(/\s+/), out = [], linea = '';
     for (var i = 0; i < palabras.length; i++) {
@@ -151,31 +277,21 @@
     return out;
   }
 
-  // Una sola función dibuja y mide: con medir=true solo acumula la altura,
-  // así se sabe cuánto medirá el lienzo antes de pintarlo de verdad.
   function construir(medir, pago) {
     var y = 18;
-
     function texto(txt, font, align, x) {
       ctx.font = font;
-      if (!medir) {
-        ctx.textAlign = align;
-        ctx.fillText(txt, x, y);
-      }
+      if (!medir) { ctx.textAlign = align; ctx.fillText(txt, x, y); }
     }
-    function linea(grosor, punteada) {
+    function raya(grosor, punteada) {
       if (!medir) {
         ctx.fillStyle = '#000';
-        if (punteada) {
-          for (var x = PAD; x < W - PAD; x += 8) ctx.fillRect(x, y, 4, grosor);
-        } else {
-          ctx.fillRect(PAD, y, CW, grosor);
-        }
+        if (punteada) { for (var x = PAD; x < W - PAD; x += 8) ctx.fillRect(x, y, 4, grosor); }
+        else ctx.fillRect(PAD, y, CW, grosor);
       }
       y += grosor + 10;
     }
 
-    // Logo
     if (logoImg) {
       var lw = Math.min(200, CW);
       var lh = Math.round(logoImg.height * (lw / logoImg.width));
@@ -183,58 +299,39 @@
       y += lh + 10;
     }
 
-    // Negocio
     ctx.font = 'bold 26px ' + SANS;
     y += 24;
     texto(TICKET.negocio, 'bold 26px ' + SANS, 'center', W / 2);
     y += 12;
+    raya(3, false);
 
-    linea(3, false);
-
-    // Datos de la venta
     ctx.font = '19px ' + SANS;
-    var datos = [
-      'FOLIO: ' + TICKET.folio,
-      TICKET.fecha,
-      'Alumno: ' + TICKET.alumno,
-      'Grado/Grupo: ' + TICKET.grupo
-    ];
+    var datos = ['FOLIO: ' + TICKET.folio, TICKET.fecha,
+                 'Alumno: ' + TICKET.alumno, 'Grado/Grupo: ' + TICKET.grupo];
     for (var d = 0; d < datos.length; d++) {
       var trozos = envolver(datos[d], CW);
-      for (var t = 0; t < trozos.length; t++) {
-        y += 21;
-        texto(trozos[t], '19px ' + SANS, 'left', PAD);
-      }
+      for (var t = 0; t < trozos.length; t++) { y += 21; texto(trozos[t], '19px ' + SANS, 'left', PAD); }
     }
     y += 8;
+    raya(1, true);
 
-    linea(1, true);
-
-    // Libros: título a la izquierda (envuelve), precio a la derecha
     for (var i = 0; i < TICKET.items.length; i++) {
       var it = TICKET.items[i];
       ctx.font = '20px ' + SANS;
       var precioTxt = money(it.precio);
       var anchoPrecio = ctx.measureText(precioTxt).width;
       var lineasTit = envolver(it.titulo, CW - anchoPrecio - 12);
-
       for (var k = 0; k < lineasTit.length; k++) {
         y += 22;
         texto(lineasTit[k], '20px ' + SANS, 'left', PAD);
-        // el precio va en el último renglón del título
         if (k === lineasTit.length - 1) texto(precioTxt, '20px ' + SANS, 'right', W - PAD);
       }
-      if (it.autor) {
-        y += 19;
-        texto(it.autor, '17px ' + SANS, 'left', PAD + 10);
-      }
+      if (it.autor) { y += 19; texto(it.autor, '17px ' + SANS, 'left', PAD + 10); }
       y += 6;
     }
     y += 4;
+    raya(1, true);
 
-    linea(1, true);
-
-    // Totales
     y += 26;
     texto('TOTAL', 'bold 24px ' + SANS, 'left', PAD);
     texto('$' + money(TICKET.total), 'bold 24px ' + SANS, 'right', W - PAD);
@@ -250,74 +347,63 @@
     y += 12;
 
     if (TICKET.notas) {
-      linea(1, true);
+      raya(1, true);
       var ln = envolver('Notas: ' + TICKET.notas, CW);
-      ctx.font = '18px ' + SANS;
       for (var n = 0; n < ln.length; n++) { y += 20; texto(ln[n], '18px ' + SANS, 'left', PAD); }
       y += 8;
     }
 
-    linea(3, false);
-
+    raya(3, false);
     y += 24;
     texto('¡Gracias por su compra!', '20px ' + SANS, 'center', W / 2);
-
-    // Espacio en blanco para el sello (16 mm ≈ 128 px a 203 dpi)
     y += 128;
-
     return y;
   }
 
-  function dibujar() {
-    var v = parseFloat(input.value);
-    var pago = (!input.value || isNaN(v) || v <= 0) ? null : v;
-
-    // Pasada 1: medir. Pasada 2: pintar.
-    var alto = construir(true, pago);
-    lienzo.height = Math.ceil(alto);
-
+  function dibujarCanvas() {
+    var pago = pagoActual();
+    lienzo.height = Math.ceil(construir(true, pago));
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, W, lienzo.height);
     ctx.fillStyle = '#000';
-    ctx.textBaseline = 'alphabetic';
     construir(false, pago);
-
-    blobActual = null; // el PNG anterior ya no vale
-  }
-
-  function actualizarResumen() {
-    var v = parseFloat(input.value);
-    var resCambio = document.getElementById('resCambio');
-    var aviso = document.getElementById('aviso');
-
-    if (!input.value || isNaN(v) || v <= 0) {
-      resCambio.hidden = true; aviso.hidden = true;
-    } else if (v < TICKET.total) {
-      resCambio.hidden = true;
-      aviso.hidden = false;
-      aviso.textContent = 'Faltan $' + money(TICKET.total - v) + ' para cubrir el total.';
-    } else {
-      aviso.hidden = true;
-      resCambio.hidden = false;
-      document.getElementById('resCambioTxt').textContent = '$' + money(v - TICKET.total);
-    }
-    dibujar();
+    blobActual = null;
   }
 
   function obtenerBlob() {
+    dibujarCanvas();
     return new Promise(function (resolve) {
-      if (blobActual) return resolve(blobActual);
       lienzo.toBlob(function (b) { blobActual = b; resolve(b); }, 'image/png');
     });
   }
 
-  input.addEventListener('input', actualizarResumen);
+  input.addEventListener('input', actualizarHTML);
 
   document.getElementById('rapidos').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-monto]');
     if (!btn) return;
     input.value = (btn.dataset.monto === 'exacto') ? money(TICKET.total) : btn.dataset.monto;
-    actualizarResumen();
+    actualizarHTML();
+  });
+
+  // Modo captura: deja solo el ticket en pantalla
+  document.getElementById('btnCaptura').addEventListener('click', function () {
+    document.body.classList.add('capturando');
+    window.scrollTo(0, 0);
+  });
+  document.getElementById('btnSalirCaptura').addEventListener('click', function () {
+    document.body.classList.remove('capturando');
+  });
+
+  document.getElementById('btnDescargar').addEventListener('click', function () {
+    obtenerBlob().then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'ticket-' + TICKET.folio + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
   });
 
   document.getElementById('btnCompartir').addEventListener('click', function () {
@@ -329,34 +415,18 @@
       } else {
         document.getElementById('ayuda').innerHTML =
           '<strong>Este navegador no puede compartir archivos.</strong> Usa ' +
-          '<em>Descargar imagen PNG</em> y ábrela desde AiYin, o abre esta misma ' +
-          'página en el celular con Chrome.';
+          '<em>Descargar imagen PNG</em> y ábrela desde la galería en AiYin.';
       }
     });
   });
 
-  document.getElementById('btnDescargar').addEventListener('click', function () {
-    obtenerBlob().then(function (blob) {
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'ticket-' + TICKET.folio + '.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    });
-  });
-
-  // El logo es opcional: si no carga, el ticket sale igual con el nombre.
   if (TICKET.logo) {
     logoImg = new Image();
-    logoImg.onload  = dibujar;
-    logoImg.onerror = function () { logoImg = null; dibujar(); };
+    logoImg.onload  = function () {};
+    logoImg.onerror = function () { logoImg = null; };
     logoImg.src = TICKET.logo;
-  } else {
-    dibujar();
   }
+  actualizarHTML();
 })();
 </script>
 
