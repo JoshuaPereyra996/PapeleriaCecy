@@ -18,7 +18,7 @@
     <tbody>
       <% ventas.forEach(v => { %>
         <tr>
-          <td><%= new Date(v.fecha).toLocaleDateString('es-MX') %></td>
+          <td><%= fmt.soloFecha(v.fecha) %></td>
           <td><%= v.alumno_nombre %></td>
           <td><%= v.grado %>° <%= v.grupo %></td>
           <td><%= v.turno %></td>

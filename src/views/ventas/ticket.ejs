@@ -8,9 +8,9 @@
   // que ser HTML de verdad. El canvas sigue existiendo pero oculto, solo para
   // generar el PNG de "Descargar" / "Compartir".
   const folio    = String(venta.id).padStart(5, '0');
-  const f        = new Date(venta.fecha);
-  const fechaTxt = f.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
-                   '  ' + f.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  // Sin new Date(): la fecha llega como texto desde MySQL y se formatea tal
+  // cual, para que ninguna conversión de zona horaria mueva la hora.
+  const fechaTxt = fmt.fechaHora(venta.fecha);
   const total    = Number(venta.total);
 
   const datosTicket = {

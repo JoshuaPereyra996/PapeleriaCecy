@@ -45,6 +45,7 @@ papeleriaApp.use((req, res, next) => {
   const base = req.baseUrl; // '/papeleria' — capturado aquí antes de que Express
                             // lo sobreescriba al delegar a routers hijos
   res.locals.usuario = req.session.usuario || null;
+  res.locals.fmt = require('./src/fecha');
   res.locals.base = base;
 
   const _redirect = res.redirect.bind(res);

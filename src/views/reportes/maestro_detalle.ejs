@@ -18,7 +18,7 @@
           <td><%= it.grado %>° <%= it.grupo %></td>
           <td><%= it.turno %></td>
           <td><%= it.libro %></td>
-          <td><%= new Date(it.fecha).toLocaleDateString('es-MX') %></td>
+          <td><%= fmt.soloFecha(it.fecha) %></td>
         </tr>
       <% }) %>
     </tbody>

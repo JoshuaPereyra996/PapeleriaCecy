@@ -38,7 +38,7 @@ async function obtenerVentaDetalle(id) {
 
 function construirNota(venta, items) {
   const negocio = process.env.NEGOCIO_NOMBRE || 'Papelería';
-  const fecha = new Date(venta.fecha).toLocaleDateString('es-MX');
+  const fecha = require('../fecha').soloFecha(venta.fecha);
   let txt = `${negocio}\nNota de compra\n\n`;
   txt += `Alumno: ${venta.alumno_nombre}\n`;
   txt += `Grado/Grupo: ${venta.grado}° ${venta.grupo}\n`;
