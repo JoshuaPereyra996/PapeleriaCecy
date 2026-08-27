@@ -355,6 +355,10 @@ select{cursor:pointer}
         </select>
         <select id="sIr"><option value="">Todas las expansiones</option></select>
         <select id="tIr"><option value="">Todos los tipos</option></select>
+        <select id="ordIr" title="Orden de las cartas mostradas">
+          <option value="set" selected>Orden: era y expansión</option>
+          <option value="dex">Orden: N.º Pokédex</option>
+        </select>
         <select id="serIr">
           <option value="Scarlet &amp; Violet" selected>Era: Escarlata y Púrpura</option>
           <option value="Mega Evolution">Era: Mega Evolution</option>
@@ -842,7 +846,7 @@ const S = {
   irCards : null,
   irFailed: [],
   nat : {q:"", f:"all", type:"", gen:""},
-  ir  : {q:"", f:"all", rarity:"", set:"", type:"", series:"Scarlet & Violet"},
+  ir  : {q:"", f:"all", rarity:"", set:"", type:"", series:"Scarlet & Violet", sort:"set"},
 };
 
 /* ------------------------------------------------------------- indicadores -- */
@@ -972,6 +976,15 @@ async function openNatModal(id){
 /* ============================================================================
    VISTA 2 · ILLUSTRATION RARES (SCARLET & VIOLET)
    ========================================================================== */
+/* N.º de la Pokédex Nacional de la carta. Llega con dos nombres según la ruta:
+   `dex` cuando responde el gateway (providers.js ya lo normalizó) y
+   `nationalPokedexNumbers` cuando la página habla directo con pokemontcg.io.
+   Las cartas de Entrenador no traen ninguno de los dos → null. */
+function dexOf(c){
+  const a = c.dex || c.nationalPokedexNumbers || [];
+  return a.length ? Math.min(...a) : null;   // las cartas con dos Pokémon van por el menor
+}
+
 function irFiltered(){
   const {q, f, rarity, set, type} = S.ir;
   const term = q.trim().toLowerCase();
@@ -994,6 +1007,7 @@ function irCard(c){
   const own  = Store.irOwned(c.id);
   const ent  = Store.data.illustration_rares[c.id] || {};
   const sar  = c.rarity === "Special Illustration Rare";
+  const dex  = dexOf(c);
   return `<article class="card ${own?"own":"miss"}" data-cid="${esc(c.id)}">
     <div class="img" data-zoom="${esc((c.images||{}).large || (c.images||{}).small || "")}" data-nm="${esc(c.name)}">
       <img loading="lazy" src="${esc((c.images||{}).small||"")}" alt="${esc(c.name)}">
@@ -1001,7 +1015,7 @@ function irCard(c){
     </div>
     <div class="meta">
       <b>${esc(c.name)}</b>
-      <small>${esc((c.set||{}).name||"")} · ${esc(c.number||"?")} ${c.artist?"· "+esc(c.artist):""}</small>
+      <small>${dex !== null ? "#" + pad(dex) + " · " : ""}${esc((c.set||{}).name||"")} · ${esc(c.number||"?")} ${c.artist?"· "+esc(c.artist):""}</small>
     </div>
     <div class="act">
       <button class="toggle" data-act="toggle">${own ? "✓ La tengo" : "Me falta"}</button>
@@ -1014,7 +1028,7 @@ function irCard(c){
 
 function renderIr(){
   if (!S.irCards){ paintGauges(); return; }
-  const list = irFiltered();
+  const list = irSorted(irFiltered());
   const own  = Store.irCount();
   $("#hIr").innerHTML = `<span class="count">${list.length} mostradas · ${own} / ${S.irCards.length} obtenidas (${pct(own, S.irCards.length)}%)</span>`;
   $("#irBody").innerHTML = irWarning(S.irFailed) + (list.length
@@ -1041,6 +1055,25 @@ function sortIr(list){
   return list.sort((a,b) => {
     const da = (a.set||{}).releaseDate || "", db = (b.set||{}).releaseDate || "";
     if (da !== db) return da < db ? -1 : 1;
+    return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0);
+  });
+}
+
+/* Orden de lo que se muestra. El catálogo ya viene ordenado por era/expansión
+   desde sortIr(), así que "set" no toca nada; "dex" reordena una copia — nunca
+   S.irCards — para que volver al orden por expansión no cueste recargar. */
+function irSorted(list){
+  if (S.ir.sort !== "dex") return list;
+  return list.slice().sort((a, b) => {
+    const da = dexOf(a), db = dexOf(b);
+    if (da === null || db === null){
+      if (da === db) return 0;          // ambas sin dex: se quedan como estaban
+      return da === null ? 1 : -1;      // Entrenadores y demás, al final
+    }
+    if (da !== db) return da - db;
+    // Mismo Pokémon: sus cartas en orden cronológico.
+    const ra = (a.set||{}).releaseDate || "", rb = (b.set||{}).releaseDate || "";
+    if (ra !== rb) return ra < rb ? -1 : 1;
     return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0);
   });
 }
@@ -1176,6 +1209,7 @@ $("#fIr").addEventListener("click", e => {
 $("#rIr").addEventListener("change", e => { S.ir.rarity = e.target.value; renderIr(); });
 $("#sIr").addEventListener("change", e => { S.ir.set    = e.target.value; renderIr(); });
 $("#tIr").addEventListener("change", e => { S.ir.type   = e.target.value; renderIr(); });
+$("#ordIr").addEventListener("change", e => { S.ir.sort = e.target.value; renderIr(); });
 $("#serIr").addEventListener("change", e => {
   S.ir.series = e.target.value;
   S.ir.set = ""; S.ir.type = "";
