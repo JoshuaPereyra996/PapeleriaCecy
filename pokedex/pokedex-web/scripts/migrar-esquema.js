@@ -28,6 +28,24 @@ const { cfg } = require("../src/db");
       if (!r[0].n){ await conn.query(ddl); console.log(`  + columna ${tabla}.${columna} añadida`); }
     }
 
+    /* Seed de carpetas ESPECIALES: cada usuario debe tener su carpeta Pokédex
+       y su carpeta AR/SAR en el lienzo. Su interior sigue leyendo
+       pokedex_entries / rare_entries; aquí solo creamos la tarjeta del lienzo.
+       INSERT ... SELECT + NOT EXISTS lo hace idempotente y multiusuario. */
+    const especiales = [
+      ["pokedex", "Pokédex Nacional", "#ef4444"],
+      ["rares",   "Illustration Rares", "#a855f7"],
+    ];
+    for (const [kind, name, color] of especiales){
+      const [r] = await conn.query(
+        `INSERT INTO folders (owner_id, name, color, kind, sort_order)
+         SELECT u.id, ?, ?, ?, 0 FROM users u
+         WHERE NOT EXISTS (
+           SELECT 1 FROM folders f WHERE f.owner_id = u.id AND f.kind = ?
+         )`, [name, color, kind, kind]);
+      if (r.affectedRows) console.log(`  + carpeta especial '${kind}' creada para ${r.affectedRows} usuario(s)`);
+    }
+
     const [t] = await conn.query("SHOW TABLES");
     console.log("✔ Esquema aplicado. Tablas:", t.map(r => Object.values(r)[0]).join(", "));
   }catch(e){

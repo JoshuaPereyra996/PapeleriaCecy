@@ -274,6 +274,121 @@ module.exports = function createPokedex(opts = {}){
     }finally{ conn.release(); }
   });
 
+  /* ========================= LIENZO DE CARPETAS ========================== */
+  /* Rejillas permitidas para las carpetas normales (filas x columnas). Las
+     carpetas especiales (pokedex/rares) no usan rejilla: su interior sigue
+     leyendo pokedex_entries / rare_entries. */
+  const GRIDS = new Set(["2x2","3x3","4x4","5x4","5x5"]);
+
+  router.get("/api/folders", requireAuth, async (req, res) => {
+    const uid = req.session.userId;
+    try{
+      const [rows] = await pool.execute(
+        `SELECT f.id, f.name, f.color, f.kind, f.rows_count, f.cols_count, f.sort_order,
+                COUNT(p.id) AS card_count,
+                COALESCE(SUM(i.price),0) AS total_value
+         FROM folders f
+         LEFT JOIN card_placements p ON p.folder_id = f.id
+         LEFT JOIN inventory_items  i ON i.id = p.item_id
+         WHERE f.owner_id = ?
+         GROUP BY f.id
+         ORDER BY f.sort_order, f.id`, [uid]);
+      // Las carpetas especiales cuentan desde sus propias tablas.
+      const [[pk]] = await pool.execute("SELECT COUNT(*) AS n FROM pokedex_entries WHERE user_id = ?", [uid]);
+      const [[rr]] = await pool.execute("SELECT COUNT(*) AS n FROM rare_entries   WHERE user_id = ?", [uid]);
+      const data = rows.map(f => ({
+        id: f.id, name: f.name, color: f.color, kind: f.kind,
+        rows: f.rows_count, cols: f.cols_count, sort_order: f.sort_order,
+        card_count: f.kind === "pokedex" ? pk.n : f.kind === "rares" ? rr.n : f.card_count,
+        total_value: Number(f.total_value),
+      }));
+      res.json({ data });
+    }catch(e){ console.error("folders:", e.message); res.status(500).json({ error: "no se pudieron leer las carpetas" }); }
+  });
+
+  router.post("/api/folders", requireAuth, async (req, res) => {
+    const name = S(req.body.name, 96).trim();
+    const color = S(req.body.color, 16) || "#3b82f6";
+    const rows = Number(req.body.rows), cols = Number(req.body.cols);
+    if (!name) return res.status(400).json({ error: "nombre requerido" });
+    if (!GRIDS.has(`${rows}x${cols}`)) return res.status(400).json({ error: "tamaño de rejilla no permitido" });
+    try{
+      const [[o]] = await pool.execute(
+        "SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM folders WHERE owner_id = ?", [req.session.userId]);
+      const [r] = await pool.execute(
+        `INSERT INTO folders (owner_id, name, color, kind, rows_count, cols_count, sort_order)
+         VALUES (?,?,?,'normal',?,?,?)`,
+        [req.session.userId, name, color, rows, cols, o.n]);
+      res.json({ ok: true, id: r.insertId });
+    }catch(e){ console.error(e.message); res.status(500).json({ error: "no se pudo crear la carpeta" }); }
+  });
+
+  /* Reordenar: recibe { order: [id, id, ...] } en el orden deseado del lienzo.
+     Se define ANTES de "/:id" para que "reorder" no se interprete como un id. */
+  router.put("/api/folders/reorder", requireAuth, async (req, res) => {
+    const order = Array.isArray(req.body.order) ? req.body.order : null;
+    if (!order) return res.status(400).json({ error: "order debe ser un array de ids" });
+    const conn = await pool.getConnection();
+    try{
+      await conn.beginTransaction();
+      let i = 0;
+      for (const fid of order){
+        const id = Number(fid); if (!Number.isInteger(id)) continue;
+        await conn.execute("UPDATE folders SET sort_order = ? WHERE id = ? AND owner_id = ?",
+          [i++, id, req.session.userId]);
+      }
+      await conn.commit();
+      res.json({ ok: true });
+    }catch(e){ await conn.rollback().catch(()=>{}); console.error(e.message); res.status(500).json({ error: "no se pudo reordenar" }); }
+    finally{ conn.release(); }
+  });
+
+  router.put("/api/folders/:id", requireAuth, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+    try{
+      const [[f]] = await pool.execute(
+        "SELECT kind FROM folders WHERE id = ? AND owner_id = ?", [id, req.session.userId]);
+      if (!f) return res.status(404).json({ error: "carpeta no encontrada" });
+      const sets = [], vals = [];
+      if (req.body.name != null){
+        const n = S(req.body.name, 96).trim();
+        if (!n) return res.status(400).json({ error: "nombre vacío" });
+        sets.push("name = ?"); vals.push(n);
+      }
+      if (req.body.color != null){ sets.push("color = ?"); vals.push(S(req.body.color, 16)); }
+      if (req.body.rows != null || req.body.cols != null){
+        if (f.kind !== "normal") return res.status(400).json({ error: "las carpetas especiales no cambian de rejilla" });
+        const rows = Number(req.body.rows), cols = Number(req.body.cols);
+        if (!GRIDS.has(`${rows}x${cols}`)) return res.status(400).json({ error: "tamaño de rejilla no permitido" });
+        // No encoger dejando cartas huérfanas fuera de la nueva rejilla.
+        const [[over]] = await pool.execute(
+          "SELECT COUNT(*) AS n FROM card_placements WHERE folder_id = ? AND (row_pos >= ? OR col_pos >= ?)",
+          [id, rows, cols]);
+        if (over.n) return res.status(409).json({ error: "hay cartas fuera de la nueva rejilla; muévelas primero" });
+        sets.push("rows_count = ?", "cols_count = ?"); vals.push(rows, cols);
+      }
+      if (!sets.length) return res.json({ ok: true });
+      vals.push(id, req.session.userId);
+      await pool.execute(`UPDATE folders SET ${sets.join(", ")} WHERE id = ? AND owner_id = ?`, vals);
+      res.json({ ok: true });
+    }catch(e){ console.error(e.message); res.status(500).json({ error: "no se pudo actualizar" }); }
+  });
+
+  router.delete("/api/folders/:id", requireAuth, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+    try{
+      const [[f]] = await pool.execute(
+        "SELECT kind FROM folders WHERE id = ? AND owner_id = ?", [id, req.session.userId]);
+      if (!f) return res.status(404).json({ error: "carpeta no encontrada" });
+      if (f.kind !== "normal") return res.status(400).json({ error: "no se puede borrar una carpeta especial" });
+      // ON DELETE CASCADE limpia card_placements; el inventario NO se borra.
+      await pool.execute("DELETE FROM folders WHERE id = ? AND owner_id = ?", [id, req.session.userId]);
+      res.json({ ok: true });
+    }catch(e){ console.error(e.message); res.status(500).json({ error: "no se pudo borrar" }); }
+  });
+
   /* ============================ CARTAS (gateway) ========================== */
   /* Requieren sesión: no queremos que el mundo consuma nuestros créditos. */
   const api = () => providers.current();
