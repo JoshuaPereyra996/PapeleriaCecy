@@ -19,8 +19,9 @@
         <label>Grado</label>
         <select name="grado" required>
           <option value="">— Selecciona —</option>
-          <% ['1','2','3'].forEach(op => { %>
-            <option value="<%= op %>" <%= venta && venta.grado === op ? 'selected' : '' %>><%= op %></option>
+          <% // El valor guardado sigue siendo 1/2/3 (año); solo cambia la etiqueta al semestre que le corresponde
+             [['1','1er SEMESTRE'], ['2','3ER SEMESTRE'], ['3','5TO SEMESTRE']].forEach(([val, txt]) => { %>
+            <option value="<%= val %>" <%= venta && venta.grado === val ? 'selected' : '' %>><%= txt %></option>
           <% }) %>
         </select>
       </div>
@@ -28,7 +29,7 @@
         <label>Grupo</label>
         <select name="grupo" required>
           <option value="">— Selecciona —</option>
-          <% ['A','B','C','D','E','F'].forEach(op => { %>
+          <% ['A','B','C','D','E','F','G','H'].forEach(op => { %>
             <option value="<%= op %>" <%= venta && venta.grupo === op ? 'selected' : '' %>><%= op %></option>
           <% }) %>
         </select>
