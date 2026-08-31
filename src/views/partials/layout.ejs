@@ -6,9 +6,10 @@
   <title><%= titulo %> · Papelería CeCy</title>
   <link rel="stylesheet" href="<%= base %>/css/styles.css">
 </head>
-<body>
+<% const MODULOS = { libros:'Libros', maestros:'Maestros', ventas:'Ventas', reportes:'Reportes' }; %>
+<body class="mod-<%= modulo %>">
   <header class="barra">
-  <h1>Papelería · Libros</h1>
+  <h1>Papelería Cecy<% if (MODULOS[modulo]) { %> · <%= MODULOS[modulo] %><% } %></h1>
   <% if (usuario) { %>
     <div class="usuario-barra">
       <span><%= usuario.nombre %></span>
@@ -20,11 +21,11 @@
 </header>
 <% if (usuario) { %>
   <nav class="menu">
-    <a href="<%= base %>/">Inicio</a>
-    <a href="<%= base %>/libros">Libros</a>
-    <a href="<%= base %>/maestros">Maestros</a>
-    <a href="<%= base %>/ventas">Ventas</a>
-    <a href="<%= base %>/reportes">Reportes</a>
+    <a href="<%= base %>/" class="<%= modulo==='inicio'?'active':'' %>">Inicio</a>
+    <a href="<%= base %>/libros" class="<%= modulo==='libros'?'active':'' %>">Libros</a>
+    <a href="<%= base %>/maestros" class="<%= modulo==='maestros'?'active':'' %>">Maestros</a>
+    <a href="<%= base %>/ventas" class="<%= modulo==='ventas'?'active':'' %>">Ventas</a>
+    <a href="<%= base %>/reportes" class="<%= modulo==='reportes'?'active':'' %>">Reportes</a>
   </nav>
 <% } %>
   <main class="contenido">

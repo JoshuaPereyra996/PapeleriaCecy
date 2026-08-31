@@ -1,12 +1,24 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; background: #f4f5f7; color: #1a1a1a; }
-.barra { background: #1e3a5f; color: #fff; padding: 1rem 2rem; }
+
+/* ── Identidad de color por módulo (paleta del logo) ──────────────────────────
+   El marco (barra/menú) se queda azul marino; cada módulo tiñe el borde de la
+   barra, el encabezado de sección, el thead de la tabla y los botones primarios
+   con su --acento. --acento-txt es el color de texto legible SOBRE ese acento
+   (el ámbar necesita texto oscuro; los demás, blanco). */
+body { --acento: #1e3a5f; --acento-txt: #fff; }
+body.mod-libros   { --acento: #2fb5c9; --acento-txt: #fff; }     /* turquesa */
+body.mod-maestros { --acento: #ec2f8b; --acento-txt: #fff; }     /* rosa */
+body.mod-ventas   { --acento: #f4b41a; --acento-txt: #16335c; }  /* ámbar (texto marino) */
+body.mod-reportes { --acento: #6d4fb0; --acento-txt: #fff; }     /* púrpura */
+
+.barra { background: #1e3a5f; color: #fff; padding: 1rem 2rem; border-bottom: 4px solid var(--acento); }
 .barra h1 { font-size: 1.25rem; }
 .contenido { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
 
 .tabla { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .tabla th, .tabla td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
-.tabla th { background: #1e3a5f; color: #fff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.tabla th { background: var(--acento); color: var(--acento-txt); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
 /* Rayado tipo cebra: un renglón sí y otro no, para seguir la fila completa de un vistazo. */
 .tabla tbody tr:nth-child(even) td { background: #f3f5f8; }
 /* El hover va después y con la misma especificidad que el cebra, para que gane siempre. */
@@ -20,13 +32,14 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f4f5f7; c
 .form-login { max-width: 360px; margin: 3rem auto; background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .form-login label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; font-weight: 600; }
 .form-login input { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
-.btn { background: #1e3a5f; color: #fff; border: none; padding: 0.7rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; }
-.btn:hover { background: #2a4d7a; }
+.btn { background: var(--acento); color: var(--acento-txt); border: none; padding: 0.7rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; }
+.btn:hover { filter: brightness(0.92); }
 .error { background: #fee2e2; color: #b91c1c; padding: 0.7rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; }
 
 .menu { background: #2a4d7a; padding: 0.6rem 2rem; display: flex; gap: 1.5rem; }
-.menu a { color: #dbe4f0; text-decoration: none; font-size: 0.9rem; }
+.menu a { color: #dbe4f0; text-decoration: none; font-size: 0.9rem; padding-bottom: 0.15rem; border-bottom: 2px solid transparent; }
 .menu a:hover { color: #fff; }
+.menu a.active { color: #fff; border-bottom-color: var(--acento); }
 
 .tarjetas { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
 .tarjeta { flex: 1; min-width: 200px; background: #fff; padding: 1.5rem; border-radius: 10px; text-decoration: none; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.1s; }
@@ -34,7 +47,11 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f4f5f7; c
 .tarjeta h3 { margin-bottom: 0.4rem; }
 .tarjeta p { font-size: 0.9rem; color: #555; }
 
-.encabezado-seccion { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.encabezado-seccion { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 3px solid var(--acento); padding-bottom: 0.6rem; }
+.encabezado-seccion h2 { border-left: 6px solid var(--acento); padding-left: 0.6rem; line-height: 1.1; }
+/* Títulos de sección sueltos (reportes, formularios) también llevan la barra de
+   acento, para que el color del módulo se sienta también fuera de las tablas. */
+.contenido > h2 { border-left: 6px solid var(--acento); padding-left: 0.6rem; line-height: 1.1; margin-bottom: 1rem; }
 .btn-inline { width: auto; display: inline-block; text-decoration: none; }
 
 .formulario { max-width: 480px; background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }

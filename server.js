@@ -47,6 +47,9 @@ papeleriaApp.use((req, res, next) => {
   res.locals.usuario = req.session.usuario || null;
   res.locals.fmt = require('./src/fecha');
   res.locals.base = base;
+  // Primer segmento de la ruta → identidad de color del módulo (libros, maestros,
+  // ventas, reportes). El layout lo usa como clase de <body> para el tema.
+  res.locals.modulo = (req.path.split('/')[1] || 'inicio');
 
   const _redirect = res.redirect.bind(res);
   res.redirect = function (statusOrUrl, url) {
