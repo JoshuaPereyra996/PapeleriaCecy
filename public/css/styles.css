@@ -5,9 +5,12 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f4f5f7; c
 .contenido { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
 
 .tabla { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.tabla th, .tabla td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.tabla th, .tabla td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
 .tabla th { background: #1e3a5f; color: #fff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
-.tabla tr:hover td { background: #f9fafb; }
+/* Rayado tipo cebra: un renglón sí y otro no, para seguir la fila completa de un vistazo. */
+.tabla tbody tr:nth-child(even) td { background: #f3f5f8; }
+/* El hover va después y con la misma especificidad que el cebra, para que gane siempre. */
+.tabla tbody tr:hover td { background: #eef2f7; }
 
 .barra { display: flex; justify-content: space-between; align-items: center; }
 .usuario-barra { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }
@@ -40,9 +43,14 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f4f5f7; c
 .form-botones { display: flex; gap: 1rem; align-items: center; }
 .btn-cancelar { color: #666; text-decoration: none; font-size: 0.9rem; }
 
-.acciones { display: flex; gap: 1rem; align-items: center; }
+/* La celda se mantiene como table-cell (no flex) para que alinee igual que las
+   demás columnas cuando el renglón crece a varias líneas. Los enlaces/botón van
+   en una sola línea con inline-block y separación por gap horizontal. */
+.acciones { white-space: nowrap; }
+.acciones a, .acciones form, .acciones .link-rojo { display: inline-block; vertical-align: middle; }
 .acciones a { color: #1e3a5f; text-decoration: none; font-size: 0.9rem; }
 .acciones form { margin: 0; }
+.acciones > * + * { margin-left: 1rem; }
 .link-rojo { background: none; border: none; color: #b91c1c; cursor: pointer; font-size: 0.9rem; padding: 0; }
 .link-rojo:hover { text-decoration: underline; }
 
