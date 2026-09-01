@@ -133,7 +133,7 @@ router.post('/:id/eliminar', async (req, res) => {
 });
 
 async function datosFormulario() {
-  const [libros]     = await db.query('SELECT id, titulo, precio FROM libros WHERE activo = 1 ORDER BY titulo');
+  const [libros]     = await db.query('SELECT id, titulo, precio, grado FROM libros WHERE activo = 1 ORDER BY titulo');
   const [maestros]   = await db.query('SELECT id, nombre_completo FROM maestros WHERE activo = 1 ORDER BY nombre_completo');
   const [relaciones] = await db.query('SELECT libro_id, maestro_id FROM libro_maestro');
   return { libros, maestros, relaciones };

@@ -105,12 +105,25 @@
     const totalTexto = document.getElementById('total-texto');
     function opcion(v, t) { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }
 
+    const selGrado = document.querySelector('select[name="grado"]');
+    // Un libro pertenece al semestre elegido si su grado coincide. Los libros
+    // SIN clasificar (grado nulo) aparecen en todos los semestres, como red de
+    // seguridad para no ocultar inventario que aún no tiene semestre asignado.
+    function libroEnSemestre(l) {
+      const g = selGrado ? selGrado.value : '';
+      if (!g) return true;                              // sin semestre elegido → todos
+      if (l.grado === null || l.grado === undefined || l.grado === '') return true;
+      return String(l.grado) === g;
+    }
     function llenarLibros(sel, permitidos, conservar) {
       const actual = conservar ? sel.value : '';
       sel.innerHTML = '';
       sel.appendChild(opcion('', '— Libro —'));
-      LIBROS.filter(l => !permitidos || permitidos.includes(String(l.id)))
-            .forEach(l => sel.appendChild(opcion(l.id, l.titulo + ' ($' + l.precio + ')')));
+      LIBROS.filter(l => {
+        if (permitidos && !permitidos.includes(String(l.id))) return false;
+        if (String(l.id) === actual) return true;       // conservar el ya elegido aunque no cuadre
+        return libroEnSemestre(l);
+      }).forEach(l => sel.appendChild(opcion(l.id, l.titulo + ' ($' + l.precio + ')')));
       if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
     }
     function llenarMaestros(sel, permitidos, conservar) {
@@ -149,6 +162,12 @@
       llenarLibros(selLibro, null, false);
       llenarMaestros(selMaestro, null, false);
       if (libroSel) {
+        // En correcciones el libro pudo capturarse antes de clasificar semestres;
+        // si el filtro lo dejó fuera, lo agregamos para no perder la selección.
+        if (![...selLibro.options].some(o => o.value === String(libroSel))) {
+          const l = LIBROS.find(x => String(x.id) === String(libroSel));
+          if (l) selLibro.appendChild(opcion(l.id, l.titulo + ' ($' + l.precio + ')'));
+        }
         selLibro.value = String(libroSel);
         llenarMaestros(selMaestro, libroAMaestros[String(libroSel)] || [], false);
         if (maestroSel) selMaestro.value = String(maestroSel);
@@ -168,6 +187,25 @@
     if (ITEMS.length > 0) ITEMS.forEach(it => crearLinea(it.libro_id, it.maestro_id));
     else crearLinea();
     recalcular();
+
+    // Al cambiar el semestre: quita las líneas cuyo libro pertenezca a OTRO
+    // semestre (los sin clasificar se respetan) y refresca las opciones del resto.
+    if (selGrado) {
+      selGrado.addEventListener('change', () => {
+        const g = selGrado.value;
+        contenedor.querySelectorAll('.linea-libro').forEach(div => {
+          const libro = LIBROS.find(l => String(l.id) === div.querySelector('.sel-libro').value);
+          if (g && libro && libro.grado != null && String(libro.grado) !== g) div.remove();
+        });
+        if (!contenedor.querySelector('.linea-libro')) crearLinea();
+        contenedor.querySelectorAll('.linea-libro').forEach(div => {
+          const selMaestro = div.querySelector('.sel-maestro');
+          llenarLibros(div.querySelector('.sel-libro'),
+                       selMaestro.value ? (maestroALibros[selMaestro.value] || []) : null, true);
+        });
+        recalcular();
+      });
+    }
 
     // Mostrar el campo de correo solo si se marca el ticket
     const chkTicket = document.getElementById('enviar_ticket');

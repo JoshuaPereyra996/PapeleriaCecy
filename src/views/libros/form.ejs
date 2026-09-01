@@ -13,6 +13,15 @@
   <label>Cantidad entregada por la editorial</label>
   <input type="number" name="cantidad_entregada" value="<%= libro ? libro.cantidad_entregada : '0' %>">
 
+  <label>Semestre al que pertenece</label>
+  <select name="grado">
+    <% // El valor guardado es 1/2/3 (año), etiquetado como semestre. Vacío = sin clasificar (aparece en todos los semestres). %>
+    <option value="">— Sin clasificar —</option>
+    <% [['1','1er SEMESTRE'], ['2','3ER SEMESTRE'], ['3','5TO SEMESTRE']].forEach(([val, txt]) => { %>
+      <option value="<%= val %>" <%= libro && String(libro.grado) === val ? 'selected' : '' %>><%= txt %></option>
+    <% }) %>
+  </select>
+
   <label>Maestros que imparten este libro</label>
   <% if (maestros.length === 0) { %>
     <p class="nota">No hay maestros registrados. Da de alta maestros primero.</p>

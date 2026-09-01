@@ -28,11 +28,12 @@ router.get('/nuevo', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const { titulo, autor, precio, cantidad_entregada } = req.body;
+  const grado = req.body.grado ? Number(req.body.grado) : null;   // vacío = sin clasificar
   const maestrosSel = aArreglo(req.body.maestros);
   try {
     const [resultado] = await db.query(
-      'INSERT INTO libros (titulo, autor, precio, cantidad_entregada) VALUES (?, ?, ?, ?)',
-      [titulo, autor, precio, cantidad_entregada || 0]
+      'INSERT INTO libros (titulo, autor, precio, cantidad_entregada, grado) VALUES (?, ?, ?, ?, ?)',
+      [titulo, autor, precio, cantidad_entregada || 0, grado]
     );
     const libroId = resultado.insertId;
     for (const maestroId of maestrosSel) {
@@ -57,11 +58,12 @@ router.get('/:id/editar', async (req, res) => {
 
 router.post('/:id', async (req, res) => {
   const { titulo, autor, precio, cantidad_entregada } = req.body;
+  const grado = req.body.grado ? Number(req.body.grado) : null;   // vacío = sin clasificar
   const maestrosSel = aArreglo(req.body.maestros);
   try {
     await db.query(
-      'UPDATE libros SET titulo = ?, autor = ?, precio = ?, cantidad_entregada = ? WHERE id = ?',
-      [titulo, autor, precio, cantidad_entregada || 0, req.params.id]
+      'UPDATE libros SET titulo = ?, autor = ?, precio = ?, cantidad_entregada = ?, grado = ? WHERE id = ?',
+      [titulo, autor, precio, cantidad_entregada || 0, grado, req.params.id]
     );
     await db.query('DELETE FROM libro_maestro WHERE libro_id = ?', [req.params.id]);
     for (const maestroId of maestrosSel) {

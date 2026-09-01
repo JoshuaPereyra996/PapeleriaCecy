@@ -7,15 +7,17 @@
 <% } else { %>
   <table class="tabla">
     <thead>
-      <tr><th>Título</th><th>Autor</th><th>Precio</th><th>Entregados</th><th>Maestros</th><th>Acciones</th></tr>
+      <tr><th>Título</th><th>Autor</th><th>Precio</th><th>Entregados</th><th>Semestre</th><th>Maestros</th><th>Acciones</th></tr>
     </thead>
     <tbody>
+      <% const SEMESTRE = { 1: '1er', 2: '3er', 3: '5to' }; %>
       <% libros.forEach(libro => { %>
         <tr>
           <td><%= libro.titulo %></td>
           <td><%= libro.autor %></td>
           <td>$<%= libro.precio %></td>
           <td><%= libro.cantidad_entregada %></td>
+          <td><%= SEMESTRE[libro.grado] || '—' %></td>
           <td><%= libro.maestros || '—' %></td>
           <td class="acciones">
             <a href="<%= base %>/libros/<%= libro.id %>/editar">Editar</a>
