@@ -101,8 +101,16 @@ papeleriaApp.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
-papeleriaApp.get('/', requireLogin, (req, res) => {
-  res.render('index', { titulo: 'Inicio' });
+const { datosDashboard } = require('./src/dashboard');
+papeleriaApp.get('/', requireLogin, async (req, res) => {
+  try {
+    const datos = await datosDashboard();
+    res.render('index', { titulo: 'Inicio', dash: datos });
+  } catch (error) {
+    // Si el dashboard falla, la home no debe caer: se muestra sin gráficas.
+    console.error('Dashboard:', error);
+    res.render('index', { titulo: 'Inicio', dash: null });
+  }
 });
 
 papeleriaApp.use('/libros', requireLogin, librosRouter);

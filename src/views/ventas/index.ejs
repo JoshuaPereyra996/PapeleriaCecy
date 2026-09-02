@@ -30,4 +30,30 @@
       <% }) %>
     </tbody>
   </table>
+
+  <%
+    // Construye la secuencia de páginas: siempre 1,2,3 y la última, más la
+    // página actual y sus vecinas; los huecos se marcan con "…".
+    function secuenciaPaginas(cur, total) {
+      const set = new Set([1, 2, 3, cur - 1, cur, cur + 1, total]);
+      const arr = [...set].filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+      const out = []; let prev = 0;
+      arr.forEach(n => { if (n - prev > 1) out.push('…'); out.push(n); prev = n; });
+      return out;
+    }
+    const qParam = q ? ('&q=' + encodeURIComponent(q)) : '';
+    const urlPagina = p => `${base}/ventas?page=${p}${qParam}`;
+  %>
+  <% if (totalPaginas > 1) { %>
+    <nav class="paginacion">
+      <% if (pagina > 1) { %><a href="<%= urlPagina(pagina - 1) %>">‹ Anterior</a><% } %>
+      <% secuenciaPaginas(pagina, totalPaginas).forEach(p => { %>
+        <% if (p === '…') { %><span class="ellipsis">…</span>
+        <% } else if (p === pagina) { %><span class="pag-actual"><%= p %></span>
+        <% } else { %><a href="<%= urlPagina(p) %>"><%= p %></a><% } %>
+      <% }) %>
+      <% if (pagina < totalPaginas) { %><a href="<%= urlPagina(pagina + 1) %>">Siguiente ›</a><% } %>
+    </nav>
+    <p class="nota-info" style="text-align:center">Página <%= pagina %> de <%= totalPaginas %> · <%= total %> venta<%= total === 1 ? '' : 's' %> en total</p>
+  <% } %>
 <% } %>

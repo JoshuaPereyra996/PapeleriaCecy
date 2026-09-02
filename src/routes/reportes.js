@@ -18,20 +18,20 @@ router.get('/', (req, res) => {
 // Reporte general para la editorial (por libro)
 router.get('/editorial', async (req, res) => {
   const { desde, hasta } = req.query;
-  // Ahora puede llegar uno o varios libros; lo normalizamos a arreglo
-  let librosSel = req.query.libro_id || [];
-  if (!Array.isArray(librosSel)) librosSel = [librosSel];
-  librosSel = librosSel.filter(x => x); // quita vacíos
+  // El "autor" del libro se usa como editorial. Ahora se filtra por editorial
+  // (un clic) en vez de marcar libro por libro.
+  const editorialSel = (req.query.editorial || '').trim();
 
   const { where, params } = filtroFechas(desde, hasta);
-  const [librosLista] = await db.query('SELECT id, titulo FROM libros WHERE activo = 1 ORDER BY titulo');
+  // Lista de editoriales disponibles (autor no vacío) para el selector.
+  const [editorialesLista] = await db.query(
+    "SELECT DISTINCT autor FROM libros WHERE activo = 1 AND autor IS NOT NULL AND autor <> '' ORDER BY autor");
 
-  // Filtro por libros seleccionados (IN con tantos signos ? como libros)
+  // Filtro por editorial seleccionada.
   let cond = where, condParams = [...params];
-  if (librosSel.length > 0) {
-    const marcadores = librosSel.map(() => '?').join(', ');
-    cond = cond ? cond + ` AND l.id IN (${marcadores})` : `WHERE l.id IN (${marcadores})`;
-    condParams.push(...librosSel);
+  if (editorialSel) {
+    cond = cond ? cond + ' AND l.autor = ?' : 'WHERE l.autor = ?';
+    condParams.push(editorialSel);
   }
 
   const [filas] = await db.query(`
@@ -58,7 +58,7 @@ router.get('/editorial', async (req, res) => {
 
   res.render('reportes/editorial', {
     titulo: 'Reporte general (editorial)', filas, desde, hasta,
-    librosLista, librosSel: librosSel.map(String),
+    editorialesLista, editorialSel,
     totales: { cobrado: tCobrado, margen: tMargen, unidades: tUnidades, editorial: tCobrado - tMargen }
   });
 });

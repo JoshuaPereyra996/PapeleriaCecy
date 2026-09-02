@@ -1,7 +1,84 @@
 <h2>Panel principal</h2>
-<p>Selecciona una sección para comenzar.</p>
 
+<% if (!dash) { %>
+  <p class="aviso">No se pudo cargar el panel en este momento. Intenta recargar.</p>
+<% } else { %>
+  <% const money = n => Number(n||0).toLocaleString('es-MX', { style:'currency', currency:'MXN' }); %>
 
+  <!-- ── KPIs ─────────────────────────────────────────────────────────────── -->
+  <div class="kpis">
+    <div class="kpi">
+      <span class="kpi-label">Ventas de hoy</span>
+      <span class="kpi-valor"><%= money(dash.kpi.hoy.monto) %></span>
+      <span class="kpi-sub"><%= dash.kpi.hoy.n %> venta<%= dash.kpi.hoy.n === 1 ? '' : 's' %></span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Este mes</span>
+      <span class="kpi-valor"><%= money(dash.kpi.mes.monto) %></span>
+      <span class="kpi-sub"><%= dash.kpi.mes.n %> venta<%= dash.kpi.mes.n === 1 ? '' : 's' %></span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Ventas totales</span>
+      <span class="kpi-valor"><%= money(dash.kpi.total.monto) %></span>
+      <span class="kpi-sub"><%= dash.kpi.total.n %> venta<%= dash.kpi.total.n === 1 ? '' : 's' %> histórico</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Alumnos del mes</span>
+      <span class="kpi-valor"><%= dash.kpi.alumnos %></span>
+      <span class="kpi-sub">distintos</span>
+    </div>
+  </div>
+
+  <!-- ── Gráficas ─────────────────────────────────────────────────────────── -->
+  <div class="panel panel-ancho">
+    <h3 class="panel-titulo">Ventas por día · últimos 30 días</h3>
+    <div class="panel-lienzo"><canvas id="gVentasDia"></canvas></div>
+  </div>
+
+  <div class="paneles">
+    <div class="panel">
+      <h3 class="panel-titulo">Ingresos por mes · últimos 12 meses</h3>
+      <div class="panel-lienzo"><canvas id="gIngresosMes"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3 class="panel-titulo">Top 10 libros más vendidos</h3>
+      <div class="panel-lienzo"><canvas id="gTopLibros"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3 class="panel-titulo">Ventas por semestre</h3>
+      <div class="panel-lienzo"><canvas id="gSemestre"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── Existencias por libro (alerta de reposición) ───────────────────────── -->
+  <% if (dash.inventario && dash.inventario.length) { %>
+    <div class="panel panel-ancho">
+      <h3 class="panel-titulo">Existencias por libro · próximos a agotarse</h3>
+      <p class="inv-leyenda">Barra sobre lo que dejó la editorial. En <span class="inv-rojo">rojo</span> los que quedan por debajo del 20%: conviene pedir más.</p>
+      <ul class="inv-lista">
+        <% dash.inventario.forEach((l, i) => { %>
+          <li class="inv-item<%= l.alerta ? ' inv-item--alerta' : '' %><%= i >= 8 ? ' inv-oculto' : '' %>">
+            <div class="inv-cab">
+              <span class="inv-titulo" title="<%= l.titulo %>"><%= l.titulo %></span>
+              <span class="inv-nums"><%= l.restante %> / <%= l.entregada %> · <%= l.pct %>%</span>
+            </div>
+            <div class="inv-barra"><div class="inv-relleno" style="width:<%= l.pct %>%"></div></div>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (dash.inventario.length > 8) { %>
+        <button type="button" class="inv-vermas" data-abierto="0" onclick="
+          const abierto = this.dataset.abierto === '1';
+          this.closest('.panel').querySelectorAll('.inv-oculto').forEach(el => el.classList.toggle('inv-mostrar', !abierto));
+          this.dataset.abierto = abierto ? '0' : '1';
+          this.textContent = abierto ? 'Ver todos (<%= dash.inventario.length %>)' : 'Ver menos';
+        ">Ver todos (<%= dash.inventario.length %>)</button>
+      <% } %>
+    </div>
+  <% } %>
+<% } %>
+
+<!-- ── Accesos rápidos ────────────────────────────────────────────────────── -->
 <div class="tarjetas">
   <a href="<%= base %>/ventas/nueva" class="tarjeta tarjeta-destacada">
     <h3>🛒 Registrar venta</h3>
@@ -16,3 +93,78 @@
     <p>Da de alta a los maestros de la escuela.</p>
   </a>
 </div>
+
+<% if (dash) { %>
+  <script src="<%= base %>/js/chart.umd.min.js"></script>
+  <script>
+    const DASH = <%- JSON.stringify(dash).replace(/</g, '\\u003c') %>;
+
+    // Paleta del logo
+    const C = { marino:'#1e3a5f', turquesa:'#2fb5c9', rosa:'#ec2f8b', ambar:'#f4b41a', purpura:'#6d4fb0' };
+    const money = n => Number(n||0).toLocaleString('es-MX', { style:'currency', currency:'MXN' });
+    Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+    Chart.defaults.color = '#4b5563';
+
+    // 1) Ventas por día (línea)
+    new Chart(document.getElementById('gVentasDia'), {
+      type: 'line',
+      data: {
+        labels: DASH.serieDias.map(d => d.dia.slice(5)),   // MM-DD
+        datasets: [{
+          data: DASH.serieDias.map(d => d.monto),
+          borderColor: C.turquesa, backgroundColor: 'rgba(47,181,201,.15)',
+          fill: true, tension: .3, pointRadius: 2, borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: c => money(c.parsed.y) } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } } },
+      },
+    });
+
+    // 2) Ingresos por mes (barras)
+    new Chart(document.getElementById('gIngresosMes'), {
+      type: 'bar',
+      data: {
+        labels: DASH.serieMeses.map(m => m.ym),
+        datasets: [{ data: DASH.serieMeses.map(m => m.monto), backgroundColor: C.rosa, borderRadius: 4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: c => money(c.parsed.y) } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } } },
+      },
+    });
+
+    // 3) Top 10 libros (barras horizontales)
+    new Chart(document.getElementById('gTopLibros'), {
+      type: 'bar',
+      data: {
+        labels: DASH.topLibros.map(l => l.titulo),
+        datasets: [{ data: DASH.topLibros.map(l => l.unidades), backgroundColor: C.ambar, borderRadius: 4 }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+      },
+    });
+
+    // 4) Ventas por semestre (dona)
+    new Chart(document.getElementById('gSemestre'), {
+      type: 'doughnut',
+      data: {
+        labels: DASH.semestre.map(s => s.etiqueta),
+        datasets: [{ data: DASH.semestre.map(s => s.n),
+          backgroundColor: [C.turquesa, C.rosa, C.ambar, C.purpura, C.marino] }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+      },
+    });
+  </script>
+<% } %>

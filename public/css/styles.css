@@ -117,6 +117,7 @@ body.mod-reportes { --acento: #6d4fb0; --acento-txt: #fff; }     /* púrpura */
 .stock-negativo { color:#b91c1c; font-weight:600; }
 
 .filtro-libros { flex: 1 1 100%; }
+.filtro-editorial select { min-width: 220px; }
 .checkbox-libros { max-height: 160px; overflow-y: auto; flex-direction: row; flex-wrap: wrap; gap: .4rem 1.2rem; }
 .checkbox-libros .checkbox-item { width: auto; }
 .filtro-botones { display: flex; gap: 1rem; align-items: center; flex: 1 1 100%; }
@@ -125,3 +126,46 @@ body.mod-reportes { --acento: #6d4fb0; --acento-txt: #fff; }     /* púrpura */
 .ticket-box { background:#f8fafc; border:1px solid #e2e8f0; padding:1rem; border-radius:8px; margin-bottom:1rem; }
 .ticket-box input[type="email"] { margin-top:.6rem; padding:.6rem; border:1px solid #d1d5db; border-radius:6px; width:100%; }
 .aviso-exito { background:#dcfce7; color:#166534; padding:.9rem 1rem; border-radius:8px; margin-bottom:1rem; font-size:.92rem; }
+
+/* Paginación de listados */
+.paginacion { display:flex; gap:.4rem; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:1.2rem; }
+.paginacion a, .paginacion .pag-actual, .paginacion .ellipsis {
+  min-width:38px; height:38px; padding:0 .6rem; display:inline-flex; align-items:center;
+  justify-content:center; border-radius:8px; font-size:.9rem; text-decoration:none; }
+.paginacion a { background:#fff; color:#1e3a5f; border:1px solid #e5e7eb; }
+.paginacion a:hover { border-color:var(--acento); }
+.paginacion .pag-actual { background:var(--acento); color:var(--acento-txt); font-weight:600; }
+.paginacion .ellipsis { color:#9ca3af; }
+
+/* ── Dashboard (panel principal) ────────────────────────────────────────────*/
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:1rem; margin:1.2rem 0; }
+.kpi { background:#fff; border-radius:12px; padding:1.1rem 1.2rem; box-shadow:0 1px 3px rgba(0,0,0,.1);
+  border-left:5px solid var(--acento); display:flex; flex-direction:column; gap:.15rem; }
+.kpi-label { font-size:.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:.4px; }
+.kpi-valor { font-size:1.7rem; font-weight:700; color:#1e3a5f; line-height:1.1; }
+.kpi-sub { font-size:.82rem; color:#9ca3af; }
+
+.paneles { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.2rem; margin-bottom:1.2rem; }
+.panel { background:#fff; border-radius:12px; padding:1.1rem 1.2rem; box-shadow:0 1px 3px rgba(0,0,0,.1); margin-bottom:1.2rem; }
+.panel-ancho { grid-column:1 / -1; }
+.panel-titulo { font-size:.95rem; color:#374151; margin-bottom:.8rem; }
+.panel-lienzo { position:relative; height:260px; }
+
+/* ── Existencias por libro (alerta de reposición) ── */
+.inv-leyenda { font-size:.82rem; color:#6b7280; margin:-.3rem 0 1rem; }
+.inv-rojo { color:#dc2626; font-weight:600; }
+.inv-lista { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.85rem; }
+.inv-oculto { display:none; }
+.inv-oculto.inv-mostrar { display:block; }
+.inv-cab { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; margin-bottom:.3rem; }
+.inv-titulo { font-size:.9rem; color:#374151; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.inv-nums { font-size:.8rem; color:#9ca3af; white-space:nowrap; }
+.inv-barra { height:10px; background:#eef1f4; border-radius:6px; overflow:hidden; }
+.inv-relleno { height:100%; background:#2fb5c9; border-radius:6px; transition:width .3s; }
+/* Bajo el 20%: contorno y barra en rojo — preventiva para pedir a la editorial */
+.inv-item--alerta .inv-relleno { background:#dc2626; }
+.inv-item--alerta .inv-barra { box-shadow:0 0 0 2px #dc2626; }
+.inv-item--alerta .inv-nums { color:#dc2626; font-weight:600; }
+.inv-vermas { margin-top:1rem; background:none; border:1px solid #cbd5e1; color:#374151;
+  border-radius:8px; padding:.45rem .9rem; font-size:.85rem; cursor:pointer; }
+.inv-vermas:hover { background:#f3f4f6; }

@@ -6,16 +6,14 @@
 <form method="GET" action="<%= base %>/reportes/editorial" class="filtro-fechas no-print">
   <div><label>Desde</label><input type="date" name="desde" value="<%= desde || '' %>"></div>
   <div><label>Hasta</label><input type="date" name="hasta" value="<%= hasta || '' %>"></div>
-  <div class="filtro-libros">
-    <label>Libros a mostrar (deja todo vacío para ver todos)</label>
-    <div class="checkbox-lista checkbox-libros">
-      <% librosLista.forEach(l => { %>
-        <label class="checkbox-item">
-          <input type="checkbox" name="libro_id" value="<%= l.id %>" <%= librosSel.includes(String(l.id)) ? 'checked' : '' %>>
-          <%= l.titulo %>
-        </label>
+  <div class="filtro-editorial">
+    <label>Editorial</label>
+    <select name="editorial" onchange="this.form.submit()">
+      <option value="">Todas las editoriales</option>
+      <% editorialesLista.forEach(e => { %>
+        <option value="<%= e.autor %>" <%= editorialSel === e.autor ? 'selected' : '' %>><%= e.autor %></option>
       <% }) %>
-    </div>
+    </select>
   </div>
   <div class="filtro-botones">
     <button type="submit" class="btn btn-inline">Filtrar</button>

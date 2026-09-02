@@ -66,6 +66,19 @@ router.get('/', async (req, res) => {
   const q = (req.query.q || '').trim();
   let where = '', params = [];
   if (q) { where = 'WHERE v.alumno_nombre LIKE ?'; params.push('%' + q + '%'); }
+
+  // Paginación: 30 ventas por hoja.
+  const porPagina = 30;
+  let pagina = parseInt(req.query.page, 10);
+  if (!Number.isInteger(pagina) || pagina < 1) pagina = 1;
+
+  const [[{ n: total }]] = await db.query(`SELECT COUNT(*) AS n FROM ventas v ${where}`, params);
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+  if (pagina > totalPaginas) pagina = totalPaginas;
+  const offset = (pagina - 1) * porPagina;
+
+  // porPagina y offset son enteros validados, se interpolan directo (LIMIT no
+  // acepta placeholders de forma fiable con query()).
   const [ventas] = await db.query(`
     SELECT v.*, COUNT(vi.id) AS num_libros
     FROM ventas v
@@ -73,8 +86,9 @@ router.get('/', async (req, res) => {
     ${where}
     GROUP BY v.id
     ORDER BY v.fecha DESC
+    LIMIT ${porPagina} OFFSET ${offset}
   `, params);
-  res.render('ventas/index', { titulo: 'Ventas', ventas, q });
+  res.render('ventas/index', { titulo: 'Ventas', ventas, q, pagina, totalPaginas, total });
 });
 
 router.get('/nueva', async (req, res) => {
