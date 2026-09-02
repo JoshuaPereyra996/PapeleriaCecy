@@ -1,9 +1,52 @@
 <h2>Panel principal</h2>
 
+<!-- ── Accesos rápidos ────────────────────────────────────────────────────── -->
+<div class="tarjetas">
+  <a href="<%= base %>/ventas/nueva" class="tarjeta tarjeta-destacada">
+    <h3>🛒 Registrar venta</h3>
+    <p>Anota la compra de un alumno.</p>
+  </a>
+  <a href="<%= base %>/libros" class="tarjeta">
+    <h3>📚 Libros</h3>
+    <p>Registra los libros que deja la editorial.</p>
+  </a>
+  <a href="<%= base %>/maestros" class="tarjeta">
+    <h3>👩‍🏫 Maestros</h3>
+    <p>Da de alta a los maestros de la escuela.</p>
+  </a>
+</div>
+
 <% if (!dash) { %>
   <p class="aviso">No se pudo cargar el panel en este momento. Intenta recargar.</p>
 <% } else { %>
   <% const money = n => Number(n||0).toLocaleString('es-MX', { style:'currency', currency:'MXN' }); %>
+
+  <!-- ── Existencias por libro (alerta de reposición) ───────────────────────── -->
+  <% if (dash.inventario && dash.inventario.length) { %>
+    <div class="panel panel-ancho">
+      <h3 class="panel-titulo">Existencias por libro · próximos a agotarse</h3>
+      <p class="inv-leyenda">Barra sobre lo que dejó la editorial. En <span class="inv-rojo">rojo</span> los que quedan por debajo del 20%: conviene pedir más.</p>
+      <ul class="inv-lista">
+        <% dash.inventario.forEach((l, i) => { %>
+          <li class="inv-item<%= l.alerta ? ' inv-item--alerta' : '' %><%= i >= 8 ? ' inv-oculto' : '' %>">
+            <div class="inv-cab">
+              <span class="inv-titulo" title="<%= l.titulo %>"><%= l.titulo %></span>
+              <span class="inv-nums"><%= l.restante %> / <%= l.entregada %> · <%= l.pct %>%</span>
+            </div>
+            <div class="inv-barra"><div class="inv-relleno" style="width:<%= l.pct %>%"></div></div>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (dash.inventario.length > 8) { %>
+        <button type="button" class="inv-vermas" data-abierto="0" onclick="
+          const abierto = this.dataset.abierto === '1';
+          this.closest('.panel').querySelectorAll('.inv-oculto').forEach(el => el.classList.toggle('inv-mostrar', !abierto));
+          this.dataset.abierto = abierto ? '0' : '1';
+          this.textContent = abierto ? 'Ver todos (<%= dash.inventario.length %>)' : 'Ver menos';
+        ">Ver todos (<%= dash.inventario.length %>)</button>
+      <% } %>
+    </div>
+  <% } %>
 
   <!-- ── KPIs ─────────────────────────────────────────────────────────────── -->
   <div class="kpis">
@@ -49,50 +92,7 @@
       <div class="panel-lienzo"><canvas id="gSemestre"></canvas></div>
     </div>
   </div>
-
-  <!-- ── Existencias por libro (alerta de reposición) ───────────────────────── -->
-  <% if (dash.inventario && dash.inventario.length) { %>
-    <div class="panel panel-ancho">
-      <h3 class="panel-titulo">Existencias por libro · próximos a agotarse</h3>
-      <p class="inv-leyenda">Barra sobre lo que dejó la editorial. En <span class="inv-rojo">rojo</span> los que quedan por debajo del 20%: conviene pedir más.</p>
-      <ul class="inv-lista">
-        <% dash.inventario.forEach((l, i) => { %>
-          <li class="inv-item<%= l.alerta ? ' inv-item--alerta' : '' %><%= i >= 8 ? ' inv-oculto' : '' %>">
-            <div class="inv-cab">
-              <span class="inv-titulo" title="<%= l.titulo %>"><%= l.titulo %></span>
-              <span class="inv-nums"><%= l.restante %> / <%= l.entregada %> · <%= l.pct %>%</span>
-            </div>
-            <div class="inv-barra"><div class="inv-relleno" style="width:<%= l.pct %>%"></div></div>
-          </li>
-        <% }) %>
-      </ul>
-      <% if (dash.inventario.length > 8) { %>
-        <button type="button" class="inv-vermas" data-abierto="0" onclick="
-          const abierto = this.dataset.abierto === '1';
-          this.closest('.panel').querySelectorAll('.inv-oculto').forEach(el => el.classList.toggle('inv-mostrar', !abierto));
-          this.dataset.abierto = abierto ? '0' : '1';
-          this.textContent = abierto ? 'Ver todos (<%= dash.inventario.length %>)' : 'Ver menos';
-        ">Ver todos (<%= dash.inventario.length %>)</button>
-      <% } %>
-    </div>
-  <% } %>
 <% } %>
-
-<!-- ── Accesos rápidos ────────────────────────────────────────────────────── -->
-<div class="tarjetas">
-  <a href="<%= base %>/ventas/nueva" class="tarjeta tarjeta-destacada">
-    <h3>🛒 Registrar venta</h3>
-    <p>Anota la compra de un alumno.</p>
-  </a>
-  <a href="<%= base %>/libros" class="tarjeta">
-    <h3>📚 Libros</h3>
-    <p>Registra los libros que deja la editorial.</p>
-  </a>
-  <a href="<%= base %>/maestros" class="tarjeta">
-    <h3>👩‍🏫 Maestros</h3>
-    <p>Da de alta a los maestros de la escuela.</p>
-  </a>
-</div>
 
 <% if (dash) { %>
   <script src="<%= base %>/js/chart.umd.min.js"></script>
