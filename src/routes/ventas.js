@@ -64,8 +64,15 @@ async function enviarTicket(correo, ventaId) {
 
 router.get('/', async (req, res) => {
   const q = (req.query.q || '').trim();
-  let where = '', params = [];
-  if (q) { where = 'WHERE v.alumno_nombre LIKE ?'; params.push('%' + q + '%'); }
+  // Búsqueda por folio: el folio es el id de la venta (el alumno llega con su
+  // ticket). Se acepta con o sin ceros a la izquierda ("377" o "00377").
+  const folio = (req.query.folio || '').trim();
+  const folioNum = folio ? parseInt(folio, 10) : null;
+
+  const cond = [], params = [];
+  if (folioNum) { cond.push('v.id = ?'); params.push(folioNum); }
+  if (q) { cond.push('v.alumno_nombre LIKE ?'); params.push('%' + q + '%'); }
+  const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
 
   // Paginación: 30 ventas por hoja.
   const porPagina = 30;
@@ -88,7 +95,7 @@ router.get('/', async (req, res) => {
     ORDER BY v.fecha DESC
     LIMIT ${porPagina} OFFSET ${offset}
   `, params);
-  res.render('ventas/index', { titulo: 'Ventas', ventas, q, pagina, totalPaginas, total });
+  res.render('ventas/index', { titulo: 'Ventas', ventas, q, folio, pagina, totalPaginas, total });
 });
 
 router.get('/nueva', async (req, res) => {
