@@ -88,6 +88,12 @@
   </form>
 
   <script>
+    // Respaldo del "Cache-Control: no-store" del servidor: si el navegador
+    // restaura esta página desde el bfcache al dar "atrás" (event.persisted),
+    // la recarga en vez de mostrar el formulario ya lleno con la venta
+    // anterior, que de otro modo se podría reenviar y duplicarla.
+    window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+
     const LIBROS = <%- JSON.stringify(libros) %>;
     const MAESTROS = <%- JSON.stringify(maestros) %>;
     const RELACIONES = <%- JSON.stringify(relaciones) %>;
@@ -106,14 +112,17 @@
     function opcion(v, t) { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }
 
     const selGrado = document.querySelector('select[name="grado"]');
-    // Un libro pertenece al semestre elegido si su grado coincide. Los libros
-    // SIN clasificar (grado nulo) aparecen en todos los semestres, como red de
-    // seguridad para no ocultar inventario que aún no tiene semestre asignado.
-    function libroEnSemestre(l) {
+    const selTurno = document.querySelector('select[name="turno"]');
+    // Un libro coincide con el semestre Y el turno elegidos (AND). Los libros
+    // SIN clasificar en cualquiera de los dos (grado o turno nulo) se cuentan
+    // como coincidencia en ese criterio, como red de seguridad para no ocultar
+    // inventario que aún no tiene semestre/turno asignado.
+    function libroCoincide(l) {
       const g = selGrado ? selGrado.value : '';
-      if (!g) return true;                              // sin semestre elegido → todos
-      if (l.grado === null || l.grado === undefined || l.grado === '') return true;
-      return String(l.grado) === g;
+      const t = selTurno ? selTurno.value : '';
+      const gradoOk = !g || l.grado === null || l.grado === undefined || l.grado === '' || String(l.grado) === g;
+      const turnoOk = !t || l.turno === null || l.turno === undefined || l.turno === '' || l.turno === t;
+      return gradoOk && turnoOk;
     }
     function llenarLibros(sel, permitidos, conservar) {
       const actual = conservar ? sel.value : '';
@@ -122,7 +131,7 @@
       LIBROS.filter(l => {
         if (permitidos && !permitidos.includes(String(l.id))) return false;
         if (String(l.id) === actual) return true;       // conservar el ya elegido aunque no cuadre
-        return libroEnSemestre(l);
+        return libroCoincide(l);
       }).forEach(l => sel.appendChild(opcion(l.id, l.titulo + ' ($' + l.precio + ')')));
       if (actual && [...sel.options].some(o => o.value === actual)) sel.value = actual;
     }
@@ -188,24 +197,29 @@
     else crearLinea();
     recalcular();
 
-    // Al cambiar el semestre: quita las líneas cuyo libro pertenezca a OTRO
-    // semestre (los sin clasificar se respetan) y refresca las opciones del resto.
-    if (selGrado) {
-      selGrado.addEventListener('change', () => {
-        const g = selGrado.value;
-        contenedor.querySelectorAll('.linea-libro').forEach(div => {
-          const libro = LIBROS.find(l => String(l.id) === div.querySelector('.sel-libro').value);
-          if (g && libro && libro.grado != null && String(libro.grado) !== g) div.remove();
-        });
-        if (!contenedor.querySelector('.linea-libro')) crearLinea();
-        contenedor.querySelectorAll('.linea-libro').forEach(div => {
-          const selMaestro = div.querySelector('.sel-maestro');
-          llenarLibros(div.querySelector('.sel-libro'),
-                       selMaestro.value ? (maestroALibros[selMaestro.value] || []) : null, true);
-        });
-        recalcular();
+    // Al cambiar el semestre o el turno: quita las líneas cuyo libro pertenezca
+    // a OTRO semestre u OTRO turno (los sin clasificar se respetan) y refresca
+    // las opciones del resto.
+    function actualizarLineasPorFiltro() {
+      const g = selGrado ? selGrado.value : '';
+      const t = selTurno ? selTurno.value : '';
+      contenedor.querySelectorAll('.linea-libro').forEach(div => {
+        const libro = LIBROS.find(l => String(l.id) === div.querySelector('.sel-libro').value);
+        if (!libro) return;
+        const gradoDistinto = g && libro.grado != null && String(libro.grado) !== g;
+        const turnoDistinto = t && libro.turno != null && libro.turno !== '' && libro.turno !== t;
+        if (gradoDistinto || turnoDistinto) div.remove();
       });
+      if (!contenedor.querySelector('.linea-libro')) crearLinea();
+      contenedor.querySelectorAll('.linea-libro').forEach(div => {
+        const selMaestro = div.querySelector('.sel-maestro');
+        llenarLibros(div.querySelector('.sel-libro'),
+                     selMaestro.value ? (maestroALibros[selMaestro.value] || []) : null, true);
+      });
+      recalcular();
     }
+    if (selGrado) selGrado.addEventListener('change', actualizarLineasPorFiltro);
+    if (selTurno) selTurno.addEventListener('change', actualizarLineasPorFiltro);
 
     // Mostrar el campo de correo solo si se marca el ticket
     const chkTicket = document.getElementById('enviar_ticket');

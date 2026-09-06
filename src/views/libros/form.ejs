@@ -22,6 +22,15 @@
     <% }) %>
   </select>
 
+  <label>Turno</label>
+  <select name="turno">
+    <% // Vacío = sin clasificar (aparece en cualquier turno), igual que el semestre. %>
+    <option value="">— Sin clasificar —</option>
+    <% ['Matutino','Vespertino'].forEach(op => { %>
+      <option value="<%= op %>" <%= libro && libro.turno === op ? 'selected' : '' %>><%= op %></option>
+    <% }) %>
+  </select>
+
   <label>Maestros que imparten este libro</label>
   <% if (maestros.length === 0) { %>
     <p class="nota">No hay maestros registrados. Da de alta maestros primero.</p>

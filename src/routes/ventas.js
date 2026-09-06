@@ -98,14 +98,23 @@ router.get('/', async (req, res) => {
   res.render('ventas/index', { titulo: 'Ventas', ventas, q, folio, pagina, totalPaginas, total });
 });
 
-router.get('/nueva', async (req, res) => {
+// Sin caché: si el navegador guardara esta página (bfcache) y el cajero
+// diera "atrás" después de registrar la venta, vería el formulario ya lleno
+// con el alumno/libros anteriores y podría reenviarlo, duplicando la venta.
+// no-store fuerza a pedirle siempre una copia nueva (formulario vacío) al servidor.
+function sinCache(req, res, next) {
+  res.set('Cache-Control', 'no-store');
+  next();
+}
+
+router.get('/nueva', sinCache, async (req, res) => {
   const datos = await datosFormulario();
   res.render('ventas/form', { titulo: 'Registrar venta', ...datos, venta: null, items: [], totalAnterior: 0, error: null });
 });
 
 router.post('/', async (req, res) => { await guardarVenta(req, res, null); });
 
-router.get('/:id/editar', async (req, res) => {
+router.get('/:id/editar', sinCache, async (req, res) => {
   const [vfilas] = await db.query('SELECT * FROM ventas WHERE id = ?', [req.params.id]);
   if (vfilas.length === 0) return res.redirect('/ventas');
   const [items] = await db.query('SELECT libro_id, maestro_id, precio FROM venta_items WHERE venta_id = ?', [req.params.id]);
@@ -154,7 +163,7 @@ router.post('/:id/eliminar', async (req, res) => {
 });
 
 async function datosFormulario() {
-  const [libros]     = await db.query('SELECT id, titulo, precio, grado FROM libros WHERE activo = 1 ORDER BY titulo');
+  const [libros]     = await db.query('SELECT id, titulo, precio, grado, turno FROM libros WHERE activo = 1 ORDER BY titulo');
   const [maestros]   = await db.query('SELECT id, nombre_completo FROM maestros WHERE activo = 1 ORDER BY nombre_completo');
   const [relaciones] = await db.query('SELECT libro_id, maestro_id FROM libro_maestro');
   return { libros, maestros, relaciones };

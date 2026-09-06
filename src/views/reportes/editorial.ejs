@@ -65,3 +65,64 @@
     <p class="nota-info">La columna de stock se oculta al filtrar por fechas, porque el cálculo de unidades restantes solo es correcto sobre el total histórico de ventas.</p>
   <% } %>
 <% } %>
+
+<div class="encabezado-seccion no-print">
+  <h3>Abonos a editorial</h3>
+</div>
+<form method="POST" action="<%= base %>/reportes/editorial/abonos" class="filtro-fechas no-print">
+  <input type="hidden" name="desde" value="<%= desde || '' %>">
+  <input type="hidden" name="hasta" value="<%= hasta || '' %>">
+  <div class="filtro-editorial">
+    <label>Editorial</label>
+    <select name="editorial" required>
+      <option value="">— Elige —</option>
+      <% editorialesLista.forEach(e => { %>
+        <option value="<%= e.autor %>" <%= editorialSel === e.autor ? 'selected' : '' %>><%= e.autor %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div><label>Fecha</label><input type="date" name="fecha" required></div>
+  <div><label>Monto</label><input type="number" step="0.01" min="0.01" name="monto" required></div>
+  <div class="filtro-libros"><label>Notas (opcional)</label><input type="text" name="notas" maxlength="255"></div>
+  <div class="filtro-botones">
+    <button type="submit" class="btn btn-inline">Registrar abono</button>
+  </div>
+</form>
+
+<% if (!editorialSel) { %>
+  <p class="nota-info">Selecciona una editorial en el filtro de arriba para ver su desglose de abonos y saldo pendiente.</p>
+<% } else { %>
+  <% if (abonos.length === 0) { %>
+    <p class="nota-info">Aún no se han registrado abonos a <%= editorialSel %><% if (desde || hasta) { %> en este periodo<% } %>.</p>
+  <% } else { %>
+    <table class="tabla">
+      <thead><tr><th>Fecha</th><th>Monto</th><th>Notas</th><th class="no-print"></th></tr></thead>
+      <tbody>
+        <% abonos.forEach(a => { %>
+          <tr>
+            <td><%= fmt.soloFecha(a.fecha) %></td>
+            <td>$<%= Number(a.monto).toFixed(2) %></td>
+            <td><%= a.notas || '' %></td>
+            <td class="acciones no-print">
+              <form action="<%= base %>/reportes/editorial/abonos/<%= a.id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar este abono?');">
+                <input type="hidden" name="editorial" value="<%= editorialSel %>">
+                <input type="hidden" name="desde" value="<%= desde || '' %>">
+                <input type="hidden" name="hasta" value="<%= hasta || '' %>">
+                <button type="submit" class="link-rojo">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr><td><strong>Total abonado</strong></td><td><strong>$<%= totalAbonado.toFixed(2) %></strong></td><td colspan="2"></td></tr>
+      </tfoot>
+    </table>
+  <% } %>
+  <div class="balance-box">
+    Saldo pendiente con <strong><%= editorialSel %></strong>:
+    <strong class="<%= (totales.editorial - totalAbonado) > 0 ? 'cobrar' : 'devolver' %>">
+      $<%= (totales.editorial - totalAbonado).toFixed(2) %>
+    </strong>
+  </div>
+<% } %>

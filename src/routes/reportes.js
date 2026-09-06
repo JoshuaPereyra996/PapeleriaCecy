@@ -56,11 +56,54 @@ router.get('/editorial', async (req, res) => {
     tUnidades += Number(f.unidades);
   });
 
+  // Abonos ya dados a la editorial seleccionada, para mostrar el desglose y
+  // el saldo pendiente. Se respeta el mismo filtro de fechas del reporte, así
+  // el saldo mostrado corresponde exactamente al periodo que se está viendo.
+  let abonos = [], totalAbonado = 0;
+  if (editorialSel) {
+    const condAbono = ['editorial = ?'], paramsAbono = [editorialSel];
+    if (desde) { condAbono.push('fecha >= ?'); paramsAbono.push(desde); }
+    if (hasta) { condAbono.push('fecha <= ?'); paramsAbono.push(hasta); }
+    [abonos] = await db.query(
+      `SELECT id, fecha, monto, notas FROM abonos_editorial WHERE ${condAbono.join(' AND ')} ORDER BY fecha, id`,
+      paramsAbono
+    );
+    totalAbonado = abonos.reduce((s, a) => s + Number(a.monto), 0);
+  }
+
   res.render('reportes/editorial', {
     titulo: 'Reporte general (editorial)', filas, desde, hasta,
     editorialesLista, editorialSel,
-    totales: { cobrado: tCobrado, margen: tMargen, unidades: tUnidades, editorial: tCobrado - tMargen }
+    totales: { cobrado: tCobrado, margen: tMargen, unidades: tUnidades, editorial: tCobrado - tMargen },
+    abonos, totalAbonado
   });
+});
+
+// Registrar un abono (pago) a una editorial.
+router.post('/editorial/abonos', async (req, res) => {
+  const { editorial, fecha, notas, desde, hasta } = req.body;
+  const monto = Number(req.body.monto);
+  const volver = `/reportes/editorial?editorial=${encodeURIComponent(editorial || '')}` +
+    (desde ? `&desde=${desde}` : '') + (hasta ? `&hasta=${hasta}` : '');
+  if (editorial && fecha && monto > 0) {
+    try {
+      await db.query(
+        'INSERT INTO abonos_editorial (editorial, fecha, monto, notas, usuario_id) VALUES (?, ?, ?, ?, ?)',
+        [editorial, fecha, monto, (notas || '').trim() || null, req.session.usuario.id]
+      );
+    } catch (error) {
+      console.error('Error al registrar abono:', error);
+    }
+  }
+  res.redirect(volver);
+});
+
+// Eliminar un abono registrado por error.
+router.post('/editorial/abonos/:id/eliminar', async (req, res) => {
+  const { editorial, desde, hasta } = req.body;
+  await db.query('DELETE FROM abonos_editorial WHERE id = ?', [req.params.id]);
+  res.redirect(`/reportes/editorial?editorial=${encodeURIComponent(editorial || '')}` +
+    (desde ? `&desde=${desde}` : '') + (hasta ? `&hasta=${hasta}` : ''));
 });
 
 // Reporte de comisiones por maestro (resumen)
