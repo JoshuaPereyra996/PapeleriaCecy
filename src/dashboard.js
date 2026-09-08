@@ -57,14 +57,15 @@ async function datosDashboard() {
   // Los vendidos se cuentan con venta_items (stock_actual no se decrementa al
   // vender). "Restante" = lo que dejó la editorial menos lo vendido; la barra
   // baja conforme se vende. Solo libros con entrega registrada (>0), porque sin
-  // total no hay porcentaje que mostrar. Orden: los más vendidos primero.
+  // total no hay porcentaje que mostrar. El orden final (por % restante, más
+  // críticos primero) se aplica en JS, donde ya está calculado el porcentaje.
   const [inventarioFilas] = await db.query(`
     SELECT l.titulo, l.cantidad_entregada AS entregada, COUNT(vi.id) AS vendidos
     FROM libros l
     LEFT JOIN venta_items vi ON vi.libro_id = l.id
     WHERE l.activo = 1 AND l.cantidad_entregada > 0
     GROUP BY l.id
-    ORDER BY vendidos DESC, l.titulo`);
+    ORDER BY l.titulo`);
 
   // Rellenar días faltantes (30) con 0.
   const mapaDia = new Map(ventasDia.map(f => [f.dia, Number(f.monto)]));
@@ -93,13 +94,18 @@ async function datosDashboard() {
     serieMeses,
     topLibros: topLibros.map(l => ({ titulo: l.titulo, unidades: l.unidades })),
     semestre:  porSemestre.map(s => ({ etiqueta: SEMESTRE[s.grado] || ('Grado ' + s.grado), n: s.n })),
+    // Del más crítico al menos crítico: menor % restante primero, para que los
+    // libros en rojo salgan siempre arriba y no queden escondidos en "Ver todos".
+    // Empates: primero el que tenga menos piezas restantes, luego por título.
     inventario: inventarioFilas.map(l => {
       const entregada = Number(l.entregada);
       const vendidos  = Number(l.vendidos);
       const restante  = Math.max(0, entregada - vendidos);
       const pct       = Math.round((restante / entregada) * 100);
       return { titulo: l.titulo, entregada, vendidos, restante, pct, alerta: pct < 20 };
-    }),
+    }).sort((a, b) =>
+      a.pct - b.pct || a.restante - b.restante || a.titulo.localeCompare(b.titulo, 'es')
+    ),
   };
 }
 

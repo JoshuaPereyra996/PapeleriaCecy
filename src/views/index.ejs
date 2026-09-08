@@ -25,10 +25,16 @@
   <% if (dash.inventario && dash.inventario.length) { %>
     <div class="panel panel-ancho">
       <h3 class="panel-titulo">Existencias por libro · próximos a agotarse</h3>
-      <p class="inv-leyenda">Barra sobre lo que dejó la editorial. En <span class="inv-rojo">rojo</span> los que quedan por debajo del 20%: conviene pedir más.</p>
+      <p class="inv-leyenda">Ordenados del más crítico al menos crítico. Barra sobre lo que dejó la editorial. En <span class="inv-rojo">rojo</span> los que quedan por debajo del 20%: conviene pedir más.</p>
+      <%
+        // Nunca se esconde un libro en alerta: se muestran los 8 primeros más
+        // todos los que estén en rojo, aunque pasen de 8.
+        const oculto = (l, i) => i >= 8 && !l.alerta;
+        const hayOcultos = dash.inventario.some(oculto);
+      %>
       <ul class="inv-lista">
         <% dash.inventario.forEach((l, i) => { %>
-          <li class="inv-item<%= l.alerta ? ' inv-item--alerta' : '' %><%= i >= 8 ? ' inv-oculto' : '' %>">
+          <li class="inv-item<%= l.alerta ? ' inv-item--alerta' : '' %><%= oculto(l, i) ? ' inv-oculto' : '' %>">
             <div class="inv-cab">
               <span class="inv-titulo" title="<%= l.titulo %>"><%= l.titulo %></span>
               <span class="inv-nums"><%= l.restante %> / <%= l.entregada %> · <%= l.pct %>%</span>
@@ -37,7 +43,7 @@
           </li>
         <% }) %>
       </ul>
-      <% if (dash.inventario.length > 8) { %>
+      <% if (hayOcultos) { %>
         <button type="button" class="inv-vermas" data-abierto="0" onclick="
           const abierto = this.dataset.abierto === '1';
           this.closest('.panel').querySelectorAll('.inv-oculto').forEach(el => el.classList.toggle('inv-mostrar', !abierto));

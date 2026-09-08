@@ -47,13 +47,15 @@ router.get('/editorial', async (req, res) => {
     ORDER BY l.titulo
   `, condParams);
 
-  let tCobrado = 0, tMargen = 0, tUnidades = 0;
+  let tCobrado = 0, tMargen = 0, tUnidades = 0, tEntregadas = 0;
   filas.forEach(f => {
     f.total_editorial = Number(f.total_cobrado) - Number(f.total_margen);
-    f.restantes = Number(f.cantidad_entregada) - Number(f.unidades);
+    f.entregadas = Number(f.cantidad_entregada) || 0;
+    f.restantes = f.entregadas - Number(f.unidades);
     tCobrado += Number(f.total_cobrado);
     tMargen  += Number(f.total_margen);
     tUnidades += Number(f.unidades);
+    tEntregadas += f.entregadas;
   });
 
   // Abonos ya dados a la editorial seleccionada, para mostrar el desglose y
@@ -74,7 +76,7 @@ router.get('/editorial', async (req, res) => {
   res.render('reportes/editorial', {
     titulo: 'Reporte general (editorial)', filas, desde, hasta,
     editorialesLista, editorialSel,
-    totales: { cobrado: tCobrado, margen: tMargen, unidades: tUnidades, editorial: tCobrado - tMargen },
+    totales: { cobrado: tCobrado, margen: tMargen, unidades: tUnidades, entregadas: tEntregadas, editorial: tCobrado - tMargen },
     abonos, totalAbonado
   });
 });

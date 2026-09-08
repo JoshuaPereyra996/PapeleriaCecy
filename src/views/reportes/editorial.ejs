@@ -30,7 +30,7 @@
   <table class="tabla">
     <thead>
       <tr>
-        <th>Libro</th><th>Precio</th><th>Unidades vendidas</th>
+        <th>Libro</th><th>Precio</th><th>Entregados</th><th>Unidades vendidas</th>
         <% if (mostrarStock) { %><th>Restantes en stock</th><% } %>
         <th>Total cobrado</th><th>Margen papelería</th><th>Para la editorial</th>
       </tr>
@@ -40,6 +40,7 @@
         <tr>
           <td><%= f.titulo %></td>
           <td>$<%= Number(f.precio).toFixed(2) %></td>
+          <td><%= f.entregadas %></td>
           <td><%= f.unidades %></td>
           <% if (mostrarStock) { %>
             <td class="<%= f.restantes < 0 ? 'stock-negativo' : '' %>"><%= f.restantes %></td>
@@ -53,6 +54,7 @@
     <tfoot>
       <tr>
         <td><strong>Totales</strong></td><td></td>
+        <td><strong><%= totales.entregadas %></strong></td>
         <td><strong><%= totales.unidades %></strong></td>
         <% if (mostrarStock) { %><td></td><% } %>
         <td><strong>$<%= totales.cobrado.toFixed(2) %></strong></td>
