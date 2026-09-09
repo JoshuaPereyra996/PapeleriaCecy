@@ -41,16 +41,22 @@
   <% } else { %>
     <div class="maestros-selector" id="maestros-selector">
       <div class="maestros-chips" id="maestros-chips"></div>
-      <input type="text" id="maestros-buscador" class="maestros-buscador" placeholder="Escribe para buscar un maestro..." autocomplete="off">
-      <div class="maestros-dropdown" id="maestros-dropdown" hidden>
-        <% maestros.forEach(m => { %>
-          <label class="checkbox-item maestros-opcion" data-nombre="<%= m.nombre_completo.toLowerCase() %>">
-            <input type="checkbox" name="maestros" value="<%= m.id %>" <%= asignados.includes(String(m.id)) ? 'checked' : '' %>>
-            <%= m.nombre_completo %>
-          </label>
-        <% }) %>
-        <p class="nota maestros-sin-resultados" hidden>Sin coincidencias.</p>
-      </div>
+      <%# <details> nativo: la lista vive en el flujo normal, así que al abrirse
+          empuja los botones hacia abajo en vez de flotar encima de ellos. %>
+      <details class="maestros-desplegable" id="maestros-desplegable">
+        <summary class="maestros-resumen">
+          <span class="maestros-resumen-texto">Ver maestros</span>
+          <span class="maestros-conteo" id="maestros-conteo"></span>
+        </summary>
+        <div class="maestros-lista">
+          <% maestros.forEach(m => { %>
+            <label class="checkbox-item maestros-opcion">
+              <input type="checkbox" name="maestros" value="<%= m.id %>" <%= asignados.includes(String(m.id)) ? 'checked' : '' %>>
+              <%= m.nombre_completo %>
+            </label>
+          <% }) %>
+        </div>
+      </details>
     </div>
   <% } %>
 
@@ -63,18 +69,18 @@
 <% if (maestros.length > 0) { %>
 <script>
   (function () {
-    const contenedor = document.getElementById('maestros-selector');
-    const buscador = document.getElementById('maestros-buscador');
-    const dropdown = document.getElementById('maestros-dropdown');
+    const desplegable = document.getElementById('maestros-desplegable');
     const chips = document.getElementById('maestros-chips');
-    const opciones = [...dropdown.querySelectorAll('.maestros-opcion')];
-    const sinResultados = dropdown.querySelector('.maestros-sin-resultados');
+    const conteo = document.getElementById('maestros-conteo');
+    const opciones = [...desplegable.querySelectorAll('.maestros-opcion')];
 
-    function pintarChips() {
+    function pintar() {
       chips.innerHTML = '';
+      let seleccionados = 0;
       opciones.forEach(op => {
         const input = op.querySelector('input');
         if (!input.checked) return;
+        seleccionados++;
         const chip = document.createElement('span');
         chip.className = 'maestro-chip';
         chip.textContent = op.textContent.trim();
@@ -82,44 +88,17 @@
         quitar.type = 'button';
         quitar.className = 'maestro-chip-quitar';
         quitar.textContent = '✕';
-        quitar.addEventListener('click', () => { input.checked = false; pintarChips(); });
+        quitar.addEventListener('click', () => { input.checked = false; pintar(); });
         chip.appendChild(quitar);
         chips.appendChild(chip);
       });
+      conteo.textContent = seleccionados === 0
+        ? 'ninguno seleccionado'
+        : seleccionados + (seleccionados === 1 ? ' seleccionado' : ' seleccionados');
     }
 
-    function filtrar() {
-      const texto = buscador.value.trim().toLowerCase();
-      let visibles = 0;
-      opciones.forEach(op => {
-        const coincide = !texto || op.dataset.nombre.includes(texto);
-        op.hidden = !coincide;
-        if (coincide) visibles++;
-      });
-      sinResultados.hidden = visibles > 0;
-      ajustarEspacio();
-    }
-
-    // El desplegable flota sobre el formulario, así que mientras está abierto
-    // reservamos su alto debajo del selector para no tapar Guardar/Cancelar.
-    function ajustarEspacio() {
-      contenedor.style.marginBottom = dropdown.hidden ? '' : (dropdown.offsetHeight + 12) + 'px';
-    }
-
-    function abrir() { dropdown.hidden = false; filtrar(); }
-    function cerrar() { dropdown.hidden = true; ajustarEspacio(); }
-
-    buscador.addEventListener('focus', abrir);
-    buscador.addEventListener('input', () => { abrir(); filtrar(); });
-    opciones.forEach(op => {
-      op.querySelector('input').addEventListener('change', pintarChips);
-    });
-    document.addEventListener('click', (e) => {
-      if (!contenedor.contains(e.target)) cerrar();
-    });
-    window.addEventListener('resize', ajustarEspacio);
-
-    pintarChips();
+    opciones.forEach(op => op.querySelector('input').addEventListener('change', pintar));
+    pintar();
   })();
 </script>
 <% } %>
