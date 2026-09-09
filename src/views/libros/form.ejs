@@ -97,10 +97,17 @@
         if (coincide) visibles++;
       });
       sinResultados.hidden = visibles > 0;
+      ajustarEspacio();
+    }
+
+    // El desplegable flota sobre el formulario, así que mientras está abierto
+    // reservamos su alto debajo del selector para no tapar Guardar/Cancelar.
+    function ajustarEspacio() {
+      contenedor.style.marginBottom = dropdown.hidden ? '' : (dropdown.offsetHeight + 12) + 'px';
     }
 
     function abrir() { dropdown.hidden = false; filtrar(); }
-    function cerrar() { dropdown.hidden = true; }
+    function cerrar() { dropdown.hidden = true; ajustarEspacio(); }
 
     buscador.addEventListener('focus', abrir);
     buscador.addEventListener('input', () => { abrir(); filtrar(); });
@@ -110,6 +117,7 @@
     document.addEventListener('click', (e) => {
       if (!contenedor.contains(e.target)) cerrar();
     });
+    window.addEventListener('resize', ajustarEspacio);
 
     pintarChips();
   })();
