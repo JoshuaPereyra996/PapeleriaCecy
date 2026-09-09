@@ -84,6 +84,17 @@ body.mod-reportes { --acento: #6d4fb0; --acento-txt: #fff; }     /* púrpura */
 .checkbox-item { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; font-size: 0.95rem; }
 .checkbox-item input { width: auto; margin: 0; }
 .nota { font-size: 0.9rem; color: #92400e; }
+
+.maestros-selector { position: relative; margin-bottom: 1rem; }
+.maestros-buscador { margin-bottom: 0; }
+.maestros-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+.maestro-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #eef2f7; color: #1e3a5f; border-radius: 999px; padding: 0.2rem 0.4rem 0.2rem 0.7rem; font-size: 0.85rem; }
+.maestro-chip-quitar { background: none; border: none; cursor: pointer; color: #1e3a5f; font-size: 0.8rem; line-height: 1; padding: 0.15rem; }
+.maestro-chip-quitar:hover { color: #b91c1c; }
+.maestros-dropdown { position: absolute; z-index: 10; top: calc(100% + 2px); left: 0; right: 0; max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.maestros-dropdown .checkbox-item { padding: 0.2rem 0.3rem; border-radius: 4px; }
+.maestros-dropdown .checkbox-item:hover { background: #f3f4f6; }
+.maestros-sin-resultados { margin: 0.2rem 0 0; }
 .formulario-ancho { max-width: 640px; }
 .linea-libro { display: flex; gap: 0.6rem; margin-bottom: 0.6rem; align-items: center; }
 .linea-libro select { flex: 1; margin-bottom: 0; padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; }

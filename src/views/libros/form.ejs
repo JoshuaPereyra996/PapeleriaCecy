@@ -39,13 +39,18 @@
   <% if (maestros.length === 0) { %>
     <p class="nota">No hay maestros registrados. Da de alta maestros primero.</p>
   <% } else { %>
-    <div class="checkbox-lista">
-      <% maestros.forEach(m => { %>
-        <label class="checkbox-item">
-          <input type="checkbox" name="maestros" value="<%= m.id %>" <%= asignados.includes(String(m.id)) ? 'checked' : '' %>>
-          <%= m.nombre_completo %>
-        </label>
-      <% }) %>
+    <div class="maestros-selector" id="maestros-selector">
+      <div class="maestros-chips" id="maestros-chips"></div>
+      <input type="text" id="maestros-buscador" class="maestros-buscador" placeholder="Escribe para buscar un maestro..." autocomplete="off">
+      <div class="maestros-dropdown" id="maestros-dropdown" hidden>
+        <% maestros.forEach(m => { %>
+          <label class="checkbox-item maestros-opcion" data-nombre="<%= m.nombre_completo.toLowerCase() %>">
+            <input type="checkbox" name="maestros" value="<%= m.id %>" <%= asignados.includes(String(m.id)) ? 'checked' : '' %>>
+            <%= m.nombre_completo %>
+          </label>
+        <% }) %>
+        <p class="nota maestros-sin-resultados" hidden>Sin coincidencias.</p>
+      </div>
     </div>
   <% } %>
 
@@ -54,3 +59,59 @@
     <a href="<%= base %>/libros" class="btn-cancelar">Cancelar</a>
   </div>
 </form>
+
+<% if (maestros.length > 0) { %>
+<script>
+  (function () {
+    const contenedor = document.getElementById('maestros-selector');
+    const buscador = document.getElementById('maestros-buscador');
+    const dropdown = document.getElementById('maestros-dropdown');
+    const chips = document.getElementById('maestros-chips');
+    const opciones = [...dropdown.querySelectorAll('.maestros-opcion')];
+    const sinResultados = dropdown.querySelector('.maestros-sin-resultados');
+
+    function pintarChips() {
+      chips.innerHTML = '';
+      opciones.forEach(op => {
+        const input = op.querySelector('input');
+        if (!input.checked) return;
+        const chip = document.createElement('span');
+        chip.className = 'maestro-chip';
+        chip.textContent = op.textContent.trim();
+        const quitar = document.createElement('button');
+        quitar.type = 'button';
+        quitar.className = 'maestro-chip-quitar';
+        quitar.textContent = '✕';
+        quitar.addEventListener('click', () => { input.checked = false; pintarChips(); });
+        chip.appendChild(quitar);
+        chips.appendChild(chip);
+      });
+    }
+
+    function filtrar() {
+      const texto = buscador.value.trim().toLowerCase();
+      let visibles = 0;
+      opciones.forEach(op => {
+        const coincide = !texto || op.dataset.nombre.includes(texto);
+        op.hidden = !coincide;
+        if (coincide) visibles++;
+      });
+      sinResultados.hidden = visibles > 0;
+    }
+
+    function abrir() { dropdown.hidden = false; filtrar(); }
+    function cerrar() { dropdown.hidden = true; }
+
+    buscador.addEventListener('focus', abrir);
+    buscador.addEventListener('input', () => { abrir(); filtrar(); });
+    opciones.forEach(op => {
+      op.querySelector('input').addEventListener('change', pintarChips);
+    });
+    document.addEventListener('click', (e) => {
+      if (!contenedor.contains(e.target)) cerrar();
+    });
+
+    pintarChips();
+  })();
+</script>
+<% } %>
